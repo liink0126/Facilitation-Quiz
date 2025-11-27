@@ -1,0 +1,5 @@
+{
+  "name": "Facilitation Quiz Generator",
+  "description": "An interactive quiz application for corporate facilitation training, allowing users to test their knowledge on various topics by generating questions and receiving AI-powered feedback.",
+  "requestFramePermissions": []
+}

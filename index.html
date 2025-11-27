@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Facilitation Quiz Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+      }
+      .animate-fade-in {
+        animation: fadeIn 0.5s ease-in-out forwards;
+      }
+      .animate-shake {
+        animation: shake 0.5s ease-in-out;
+      }
+      .content-area {
+        @apply text-base leading-7;
+        color: #334155;
+      }
+      .content-area h3 {
+        @apply text-2xl font-bold mt-8 mb-4 text-slate-800 border-b-2 border-pink-300 pb-3;
+        line-height: 1.5;
+      }
+      .content-area h4 {
+        @apply text-xl font-bold mt-6 mb-3 text-slate-800;
+        line-height: 1.5;
+      }
+      .content-area p {
+        @apply my-5 leading-8 text-slate-700;
+        font-size: 16px;
+        word-spacing: 0.05em;
+      }
+      .content-area ul {
+        @apply list-disc list-inside my-5 pl-6 space-y-2.5 text-slate-700;
+        line-height: 1.8;
+      }
+      .content-area ul li {
+        @apply mb-2;
+        padding-left: 0.5rem;
+      }
+      .content-area ol {
+        @apply list-decimal list-inside my-5 pl-6 space-y-2.5 text-slate-700;
+        line-height: 1.8;
+      }
+      .content-area ol li {
+        @apply mb-2;
+        padding-left: 0.5rem;
+      }
+      .content-area strong {
+        @apply font-bold text-slate-900;
+        font-weight: 600;
+      }
+      .content-area .callout {
+        @apply bg-pink-50 p-7 rounded-lg border-l-4 border-pink-400 my-7;
+        line-height: 1.8;
+      }
+      .content-area .callout p {
+        @apply my-3;
+      }
+      .content-area .callout h3 {
+        @apply mt-0 mb-3;
+      }
+      .content-area .checklist {
+        @apply list-none p-0 my-5;
+      }
+      .content-area .checklist li {
+        @apply flex items-start mb-4;
+        line-height: 1.7;
+      }
+      .content-area .checklist li::before {
+        content: '✔';
+        @apply mr-3 text-pink-500 font-bold text-xl;
+        margin-top: 0.1rem;
+      }
+      .content-area img {
+        @apply my-6;
+      }
+      .content-area table {
+        @apply w-full border-collapse my-6;
+        border: 1px solid #d1d5db;
+      }
+      .content-area table thead {
+        @apply bg-slate-100;
+      }
+      .content-area table th {
+        @apply border border-slate-300 p-3 text-left font-semibold text-slate-800;
+      }
+      .content-area table td {
+        @apply border border-slate-300 p-3 text-slate-700;
+      }
+      .content-area table tbody tr:nth-child(even) {
+        @apply bg-slate-50;
+      }
+      .content-area table tbody tr:hover {
+        @apply bg-pink-50;
+      }
+      /* 해설 영역 스타일 */
+      .explanation-area {
+        @apply text-base leading-7;
+        color: #1e3a8a;
+      }
+      .explanation-area p {
+        @apply my-4 leading-8;
+        font-size: 16px;
+        word-spacing: 0.05em;
+      }
+      .explanation-area h4 {
+        @apply text-lg font-bold mt-4 mb-2 text-blue-900;
+        line-height: 1.5;
+      }
+      .explanation-area ul {
+        @apply list-disc list-inside my-4 pl-6 space-y-2;
+        line-height: 1.8;
+      }
+      .explanation-area ul li {
+        @apply mb-2;
+        padding-left: 0.5rem;
+      }
+      .explanation-area strong {
+        @apply font-bold;
+        font-weight: 600;
+      }
+      .quiz-title {
+        @apply text-2xl font-bold mt-12 mb-6 text-center text-pink-700;
+      }
+
+      /* 다크 모드 스타일 */
+      .dark {
+        color-scheme: dark;
+      }
+      .dark body {
+        @apply bg-slate-900 text-slate-100;
+      }
+      .dark .bg-white {
+        @apply bg-slate-800;
+      }
+      .dark .bg-slate-50 {
+        @apply bg-slate-900;
+      }
+      .dark .text-slate-800 {
+        @apply text-slate-200;
+      }
+      .dark .text-slate-600 {
+        @apply text-slate-400;
+      }
+      .dark .border-slate-200 {
+        @apply border-slate-700;
+      }
+
+      /* 접근성: 키보드 포커스 강화 */
+      *:focus-visible {
+        @apply outline-2 outline-offset-2 outline-pink-500;
+      }
+
+      /* 부드러운 전환 애니메이션 */
+      .transition-smooth {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* 페이드 인 애니메이션 개선 */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in-up {
+        animation: fadeInUp 0.4s ease-out forwards;
+      }
+    </style>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

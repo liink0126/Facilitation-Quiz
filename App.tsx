@@ -19,7 +19,7 @@ interface IncorrectAnswer {
 }
 
 // 학습 모드 타입
-type QuizMode = 'practice' | 'exam' | 'review';
+type QuizMode = 'learning' | 'exam' | 'review';
 
 // 통계 정보 타입
 interface Statistics {
@@ -54,17 +54,20 @@ export default function App(): React.ReactElement {
   const [isGeneratingExplanation, setIsGeneratingExplanation] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showOnlyIncorrect, setShowOnlyIncorrect] = useState(false);
-  const [quizMode, setQuizMode] = useState<QuizMode>('practice');
+  const [quizMode, setQuizMode] = useState<QuizMode>('learning');
   const [statistics, setStatistics] = useState<Statistics>({
     totalAnswered: 0,
     totalCorrect: 0,
     totalIncorrect: 0,
     topicStats: {}
   });
-  const [darkMode, setDarkMode] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const startTimeRef = useRef<number>(Date.now());
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  
+  // 설계 방법론 그룹 문제들
+  const DESIGN_METHODOLOGY_QUIZZES = ["설계 방법론", "설계 방법론_2", "설계 방법론_3", "설계 방법론_4"];
+  const [currentMethodologyQuizIndex, setCurrentMethodologyQuizIndex] = useState(0);
   
   // 틀린 문제 목록 (복습용)
   const incorrectTopics = useMemo(() => {
@@ -78,11 +81,27 @@ export default function App(): React.ReactElement {
   }, [incorrectAnswers]);
 
   const selectedTopic = TOPICS[currentTopicIndex];
+  const isDesignMethodology = selectedTopic === "설계 방법론";
+  const currentMethodologyQuizKey = isDesignMethodology 
+    ? DESIGN_METHODOLOGY_QUIZZES[currentMethodologyQuizIndex] 
+    : selectedTopic;
+  
   const topicsWithQuizzes = useMemo(() => {
     if (quizMode === 'review') {
-      return TOPICS.filter(t => QUIZ_DATA[t]?.question && incorrectTopics.has(t));
+      return TOPICS.filter(t => {
+        if (t === "설계 방법론") {
+          // 설계 방법론의 경우, 그룹 내 문제 중 틀린 것이 있는지 확인
+          return DESIGN_METHODOLOGY_QUIZZES.some(q => incorrectTopics.has(q));
+        }
+        return QUIZ_DATA[t]?.question && incorrectTopics.has(t);
+      });
     }
-    return TOPICS.filter(t => QUIZ_DATA[t]?.question);
+    return TOPICS.filter(t => {
+      if (t === "설계 방법론") {
+        return QUIZ_DATA[DESIGN_METHODOLOGY_QUIZZES[0]]?.question;
+      }
+      return QUIZ_DATA[t]?.question;
+    });
   }, [quizMode, incorrectTopics]);
   const isQuizComplete = answeredTopics.size === topicsWithQuizzes.length;
   
@@ -109,14 +128,14 @@ export default function App(): React.ReactElement {
   // 학습 모드에 따른 설정
   const quizModeSettings = useMemo(() => {
     switch (quizMode) {
-      case 'practice':
-        return { hasTimer: false, allowRetry: true, showExplanation: true };
+      case 'learning':
+        return { hasTimer: false, allowRetry: true, showExplanation: true, showContent: true };
       case 'exam':
-        return { hasTimer: true, allowRetry: false, showExplanation: true };
+        return { hasTimer: true, allowRetry: false, showExplanation: true, showContent: false };
       case 'review':
-        return { hasTimer: false, allowRetry: true, showExplanation: true };
+        return { hasTimer: false, allowRetry: true, showExplanation: true, showContent: false };
       default:
-        return { hasTimer: true, allowRetry: true, showExplanation: true };
+        return { hasTimer: true, allowRetry: true, showExplanation: true, showContent: false };
     }
   }, [quizMode]);
 
@@ -130,10 +149,13 @@ export default function App(): React.ReactElement {
     setError(null);
     setTimerActive(true);
     setPersonalizedExplanation(null);
+    setCurrentMethodologyQuizIndex(0); // 설계 방법론 선택 시 첫 번째 문제로 리셋
     startTimeRef.current = Date.now();
 
     const topic = TOPICS[index];
-    const quizData = (QUIZ_DATA as Record<string, Quiz>)[topic];
+    const isDesignMethodology = topic === "설계 방법론";
+    const quizKey = isDesignMethodology ? DESIGN_METHODOLOGY_QUIZZES[0] : topic;
+    const quizData = (QUIZ_DATA as Record<string, Quiz>)[quizKey];
     const contentData = (TOPIC_CONTENT as Record<string, string>)[topic];
     
     setTopicContent(contentData || null);
@@ -151,10 +173,15 @@ export default function App(): React.ReactElement {
     
     setTimerActive(false); // Stop timer on selection
 
-    const currentQuiz = (QUIZ_DATA as Record<string, Quiz>)[selectedTopic!];
+    const isDesignMethodology = selectedTopic === "설계 방법론";
+    const currentQuizKey = isDesignMethodology 
+      ? DESIGN_METHODOLOGY_QUIZZES[currentMethodologyQuizIndex] 
+      : selectedTopic!;
+    const currentQuiz = (QUIZ_DATA as Record<string, Quiz>)[currentQuizKey];
     if (!currentQuiz) return;
 
-    const newAnsweredTopics = new Set(answeredTopics).add(selectedTopic);
+    const topicKey = isDesignMethodology ? currentQuizKey : selectedTopic!;
+    const newAnsweredTopics = new Set(answeredTopics).add(topicKey);
 
     // FIX: Check quiz type before accessing `correctAnswer` to avoid type errors.
     // `correctAnswer` is only available on `MultipleChoiceQuiz`.
@@ -164,10 +191,28 @@ export default function App(): React.ReactElement {
 
     if (isCorrect) {
       setUserSelection(option);
-      updateStatistics(selectedTopic!, true);
+      updateStatistics(topicKey, true);
+      
+      // 설계 방법론의 경우 다음 문제로 이동
+      if (isDesignMethodology && currentMethodologyQuizIndex < DESIGN_METHODOLOGY_QUIZZES.length - 1) {
+        // 다음 문제로 이동
+        setTimeout(() => {
+          setCurrentMethodologyQuizIndex(prev => prev + 1);
+          setUserSelection(null);
+          setIncorrectSelections([]);
+          setPersonalizedExplanation(null);
+          setTimerActive(true);
+          startTimeRef.current = Date.now();
+          const nextQuizKey = DESIGN_METHODOLOGY_QUIZZES[currentMethodologyQuizIndex + 1];
+          const nextQuiz = (QUIZ_DATA as Record<string, Quiz>)[nextQuizKey];
+          if (nextQuiz) {
+            setQuiz(nextQuiz);
+          }
+        }, 2000); // 2초 후 다음 문제로 이동
+      }
       
       // 틀렸던 문제를 다시 맞췄는지 확인
-      const incorrectAnswer = incorrectAnswers.get(selectedTopic!);
+      const incorrectAnswer = incorrectAnswers.get(topicKey);
       if (incorrectAnswer && incorrectAnswer.isRetrying && currentQuiz.type === 'multiple-choice') {
         // 맞춤형 해설 생성
         setIsGeneratingExplanation(true);
@@ -181,7 +226,7 @@ export default function App(): React.ReactElement {
           setPersonalizedExplanation(personalized);
           // 틀린 문제 목록에서 제거
           const newIncorrectAnswers = new Map(incorrectAnswers);
-          newIncorrectAnswers.delete(selectedTopic!);
+          newIncorrectAnswers.delete(topicKey);
           setIncorrectAnswers(newIncorrectAnswers);
           // 이제 정답을 맞췄으므로 answeredTopics에 추가
           setAnsweredTopics(newAnsweredTopics);
@@ -202,6 +247,7 @@ export default function App(): React.ReactElement {
       } else {
         // 처음부터 맞춘 경우
         setAnsweredTopics(newAnsweredTopics);
+        // 설계 방법론의 경우 다음 문제로 이동 (위에서 이미 처리됨)
       }
     } else {
       updateStatistics(selectedTopic!, false);
@@ -237,7 +283,7 @@ export default function App(): React.ReactElement {
         });
         setIncorrectAnswers(incorrectMap);
         setCurrentTopicIndex(progress.currentTopicIndex || 0);
-        setQuizMode(progress.quizMode || 'practice');
+        setQuizMode(progress.quizMode || 'learning');
         if (progress.statistics) {
           setStatistics(progress.statistics);
         }
@@ -266,15 +312,6 @@ export default function App(): React.ReactElement {
       console.error('진행 상황 저장 실패:', error);
     }
   }, [answeredTopics, incorrectAnswers, currentTopicIndex, quizMode, statistics]);
-
-  // 다크 모드 감지 및 적용
-  useEffect(() => {
-    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setDarkMode(isDark);
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
 
   // 초기 로드 시 저장된 위치로 이동
   useEffect(() => {
@@ -352,10 +389,26 @@ export default function App(): React.ReactElement {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentTopicIndex, quiz, userSelection, handleSelectTopic, handleOptionSelect]);
 
+  // 설계 방법론의 경우 현재 문제 인덱스에 따라 퀴즈 업데이트
+  useEffect(() => {
+    if (isDesignMethodology) {
+      const quizKey = DESIGN_METHODOLOGY_QUIZZES[currentMethodologyQuizIndex];
+      const quizData = (QUIZ_DATA as Record<string, Quiz>)[quizKey];
+      if (quizData) {
+        setQuiz(quizData);
+        setUserSelection(null);
+        setIncorrectSelections([]);
+        setPersonalizedExplanation(null);
+        setTimerActive(true);
+        startTimeRef.current = Date.now();
+      }
+    }
+  }, [currentMethodologyQuizIndex, isDesignMethodology]);
+
   useEffect(() => {
     setTimeLeft(quizModeSettings.hasTimer ? QUIZ_DURATION : Infinity);
     startTimeRef.current = Date.now();
-  }, [selectedTopic, quizModeSettings.hasTimer]);
+  }, [selectedTopic, currentMethodologyQuizKey, quizModeSettings.hasTimer]);
 
   // 타이머 최적화: requestAnimationFrame 사용
   useEffect(() => {
@@ -369,11 +422,16 @@ export default function App(): React.ReactElement {
       setIncorrectSelections(newIncorrectSelections);
 
       if (newIncorrectSelections.length >= 2) {
+        const isDesignMethodology = selectedTopic === "설계 방법론";
+        const topicKey = isDesignMethodology 
+          ? DESIGN_METHODOLOGY_QUIZZES[currentMethodologyQuizIndex] 
+          : selectedTopic!;
+        
         setUserSelection('TIME_UP');
-        updateStatistics(selectedTopic!, false);
+        updateStatistics(topicKey, false);
         const newIncorrectAnswers = new Map(incorrectAnswers);
-        newIncorrectAnswers.set(selectedTopic!, {
-          topic: selectedTopic!,
+        newIncorrectAnswers.set(topicKey, {
+          topic: topicKey,
           incorrectOption: 'TIME_UP',
           isRetrying: false
         });
@@ -387,7 +445,7 @@ export default function App(): React.ReactElement {
     }, 1000);
 
     return () => clearTimeout(timerId);
-  }, [timeLeft, userSelection, timerActive, quiz, selectedTopic, incorrectSelections, quizModeSettings.hasTimer, incorrectAnswers, updateStatistics]);
+  }, [timeLeft, userSelection, timerActive, quiz, selectedTopic, currentMethodologyQuizIndex, incorrectSelections, quizModeSettings.hasTimer, incorrectAnswers, updateStatistics]);
 
   const handleNextQuestion = useCallback((): void => {
     if (currentTopicIndex < TOPICS.length - 1) {
@@ -403,15 +461,20 @@ export default function App(): React.ReactElement {
 
   const handleRetryQuiz = useCallback((): void => {
     // 다시 풀기 시작
+    const isDesignMethodology = selectedTopic === "설계 방법론";
+    const topicKey = isDesignMethodology 
+      ? DESIGN_METHODOLOGY_QUIZZES[currentMethodologyQuizIndex] 
+      : selectedTopic!;
+    
     const newIncorrectAnswers = new Map(incorrectAnswers);
-    const incorrectAnswer = newIncorrectAnswers.get(selectedTopic!) as IncorrectAnswer | undefined;
+    const incorrectAnswer = newIncorrectAnswers.get(topicKey) as IncorrectAnswer | undefined;
     if (incorrectAnswer) {
       const updatedAnswer: IncorrectAnswer = {
         topic: incorrectAnswer.topic,
         incorrectOption: incorrectAnswer.incorrectOption,
         isRetrying: true
       };
-      newIncorrectAnswers.set(selectedTopic!, updatedAnswer);
+      newIncorrectAnswers.set(topicKey, updatedAnswer);
       setIncorrectAnswers(newIncorrectAnswers);
     }
     
@@ -422,7 +485,7 @@ export default function App(): React.ReactElement {
     setTimerActive(true);
     setTimeLeft(quizModeSettings.hasTimer ? QUIZ_DURATION : Infinity);
     setError(null);
-  }, [selectedTopic, incorrectAnswers, quizModeSettings.hasTimer]);
+  }, [selectedTopic, incorrectAnswers, quizModeSettings.hasTimer, currentMethodologyQuizIndex]);
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-800">
@@ -451,16 +514,6 @@ export default function App(): React.ReactElement {
         statistics={statistics}
         quizMode={quizMode}
         onQuizModeChange={setQuizMode}
-        darkMode={darkMode}
-        onDarkModeToggle={() => {
-          const newDarkMode = !darkMode;
-          setDarkMode(newDarkMode);
-          if (newDarkMode) {
-            document.documentElement.classList.add('dark');
-          } else {
-            document.documentElement.classList.remove('dark');
-          }
-        }}
       />
       <main className={`flex-1 p-4 sm:p-6 md:p-8 lg:p-10 overflow-y-auto transition-all duration-300 bg-slate-50`}>
          <header className="sm:hidden mb-4 flex items-center">
@@ -474,7 +527,7 @@ export default function App(): React.ReactElement {
           <h1 className="text-lg font-bold text-[#d83968] ml-2">Let's Facilitation!</h1>
         </header>
         <QuizArea
-          selectedTopic={selectedTopic}
+          selectedTopic={isDesignMethodology ? `설계 방법론 (${currentMethodologyQuizIndex + 1}/${DESIGN_METHODOLOGY_QUIZZES.length})` : selectedTopic}
           topicContent={topicContent}
           quiz={quiz}
           userSelection={userSelection}
@@ -486,15 +539,16 @@ export default function App(): React.ReactElement {
           isQuizComplete={isQuizComplete}
           timeLeft={timeLeft}
           quizDuration={QUIZ_DURATION}
-          isFirstQuestion={currentTopicIndex === 0}
-          isLastQuestion={currentTopicIndex === TOPICS.length - 1}
-          hasIncorrectAnswer={incorrectAnswers.has(selectedTopic!) && !incorrectAnswers.get(selectedTopic!)?.isRetrying}
+          isFirstQuestion={isDesignMethodology ? currentMethodologyQuizIndex === 0 : currentTopicIndex === 0}
+          isLastQuestion={isDesignMethodology ? currentMethodologyQuizIndex === DESIGN_METHODOLOGY_QUIZZES.length - 1 : currentTopicIndex === TOPICS.length - 1}
+          hasIncorrectAnswer={isDesignMethodology ? incorrectAnswers.has(DESIGN_METHODOLOGY_QUIZZES[currentMethodologyQuizIndex]) && !incorrectAnswers.get(DESIGN_METHODOLOGY_QUIZZES[currentMethodologyQuizIndex])?.isRetrying : incorrectAnswers.has(selectedTopic!) && !incorrectAnswers.get(selectedTopic!)?.isRetrying}
           onRetryQuiz={handleRetryQuiz}
           personalizedExplanation={personalizedExplanation}
           isGeneratingExplanation={isGeneratingExplanation}
-          currentQuestionNumber={currentTopicIndex + 1}
-          totalQuestions={topicsWithQuizzes.length}
+          currentQuestionNumber={isDesignMethodology ? currentMethodologyQuizIndex + 1 : currentTopicIndex + 1}
+          totalQuestions={isDesignMethodology ? DESIGN_METHODOLOGY_QUIZZES.length : topicsWithQuizzes.length}
           hasTimer={quizModeSettings.hasTimer}
+          showContent={quizModeSettings.showContent}
         />
       </main>
     </div>

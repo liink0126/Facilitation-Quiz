@@ -146,6 +146,7 @@ interface QuizAreaProps {
   currentQuestionNumber?: number;
   totalQuestions?: number;
   hasTimer?: boolean;
+  showContent?: boolean;
 }
 
 const QuizArea: React.FC<QuizAreaProps> = ({
@@ -170,8 +171,27 @@ const QuizArea: React.FC<QuizAreaProps> = ({
   currentQuestionNumber = 0,
   totalQuestions = 0,
   hasTimer = true,
+  showContent = false,
 }) => {
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  
+  // 학습 모드일 때는 학습 내용만 표시
+  if (showContent && topicContent) {
+    return (
+      <div className="max-w-4xl mx-auto animate-fade-in-up">
+        {selectedTopic && (
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-800 mb-8">
+            {selectedTopic}
+          </h2>
+        )}
+        <div 
+          className="content-area prose prose-slate max-w-none"
+          dangerouslySetInnerHTML={{ __html: topicContent }}
+        />
+      </div>
+    );
+  }
+  
   if (error) {
     return (
       <div className="max-w-4xl mx-auto animate-fade-in-up">

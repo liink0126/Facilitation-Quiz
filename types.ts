@@ -11,8 +11,8 @@ export interface Quiz {
 export interface MatchingQuiz extends Quiz {
   type: 'matching';
   items: Array<{
-    term: string;
-    definition: string;
+  term: string;
+  definition: string;
   }>;
 }
 

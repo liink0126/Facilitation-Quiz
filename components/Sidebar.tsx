@@ -20,10 +20,8 @@ interface SidebarProps {
     totalIncorrect: number;
     topicStats: Record<string, { correct: number; incorrect: number; attempts: number }>;
   };
-  quizMode?: 'practice' | 'exam' | 'review';
-  onQuizModeChange?: (mode: 'practice' | 'exam' | 'review') => void;
-  darkMode?: boolean;
-  onDarkModeToggle?: () => void;
+  quizMode?: 'learning' | 'exam' | 'review';
+  onQuizModeChange?: (mode: 'learning' | 'exam' | 'review') => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -40,10 +38,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onToggleShowOnlyIncorrect,
   totalTopics = 0,
   statistics,
-  quizMode = 'practice',
-  onQuizModeChange,
-  darkMode = false,
-  onDarkModeToggle
+  quizMode = 'learning',
+  onQuizModeChange
 }) => {
   const filteredTopics = showOnlyIncorrect 
     ? topics.filter((topic, index) => incorrectTopics.has(topic))
@@ -76,7 +72,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside className={`w-56 lg:w-64 h-full bg-white shadow-xl flex-shrink-0 overflow-y-auto fixed sm:relative inset-y-0 left-0 z-30 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0`}>
-      <div className="flex justify-between items-center p-4 border-b border-slate-200">
+      <div className="flex justify-between items-center p-4">
         <h1 className="text-lg font-bold text-[#d83968]">Let's Facilitation!</h1>
         <div className="flex items-center gap-2">
           <button 
@@ -96,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       
       {/* 진행률 및 통계 */}
       {totalTopics > 0 && (
-        <div className="p-3 border-b border-slate-200 bg-gradient-to-r from-pink-50 to-rose-50">
+        <div className="p-3 bg-gradient-to-r from-pink-50 to-rose-50">
           <div className="mb-3">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold text-slate-600">진행률</p>
@@ -134,12 +130,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {/* 학습 모드 선택 */}
+      {/* 모드 선택 */}
       {onQuizModeChange && (
         <div className="p-3 border-b border-slate-200">
-          <p className="text-xs font-semibold text-slate-500 mb-2">학습 모드</p>
+          <p className="text-xs font-semibold text-slate-500 mb-2">모드 선택</p>
           <div className="flex gap-1">
-            {(['practice', 'exam', 'review'] as const).map((mode) => (
+            {(['learning', 'exam', 'review'] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => onQuizModeChange(mode)}
@@ -148,36 +144,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                     ? 'bg-pink-100 text-pink-700 font-semibold'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
-                aria-label={`${mode === 'practice' ? '연습' : mode === 'exam' ? '시험' : '복습'} 모드`}
+                aria-label={`${mode === 'learning' ? '학습' : mode === 'exam' ? '시험' : '복습'} 모드`}
               >
-                {mode === 'practice' ? '연습' : mode === 'exam' ? '시험' : '복습'}
+                {mode === 'learning' ? '학습' : mode === 'exam' ? '시험' : '복습'}
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* 다크 모드 토글 */}
-      {onDarkModeToggle && (
-        <div className="p-3 border-b border-slate-200">
-          <button
-            onClick={onDarkModeToggle}
-            className="w-full text-xs px-2 py-1.5 rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
-            aria-label="다크 모드 토글"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              {darkMode ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              )}
-            </svg>
-            {darkMode ? '라이트 모드' : '다크 모드'}
-          </button>
-        </div>
-      )}
-
-      <div className="p-3 border-b border-slate-200">
+      <div className="p-3">
         <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-semibold text-slate-500">퀴즈 목차</p>
           {incorrectTopics.size > 0 && (

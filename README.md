@@ -1,20 +1,106 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 🏆 Liink Challengers
 
-# Run and deploy your AI Studio app
+**퍼실리테이션 학습 플랫폼**
 
-This contains everything you need to run your app locally.
+Liink Challengers는 퍼실리테이션 기법을 재미있고 체계적으로 학습할 수 있는 게이미피케이션 기반 학습 플랫폼입니다.
 
-View your app in AI Studio: https://ai.studio/apps/drive/19wJTaIvcMbvjaMJ0xVCYrefzR6_xarif
+## ✨ 주요 기능
 
-## Run Locally
+### 🎮 게이미피케이션 시스템
+- **포인트 시스템**: 문제를 풀 때마다 포인트 획득
+  - 기본 점수: 10점
+  - 한 번에 정답: +10점 보너스
+  - 빠른 답변: +5점 보너스
+- **레벨 시스템**: 포인트를 쌓아 레벨업
+- **배지 시스템**: 다양한 업적 달성 시 배지 획득
+  - 🎯 첫 걸음: 첫 번째 학습 완료
+  - ⭐ 초보 챌린저: 5개 학습 완료
+  - 🌟 중급 챌린저: 10개 학습 완료
+  - ✨ 고급 챌린저: 15개 학습 완료
+  - 🏆 마스터 챌린저: 모든 학습 완료
+  - 🔥 꾸준함: 3일 연속 학습
+  - 💪 습관의 힘: 7일 연속 학습
+  - 💯 완벽주의자: 한 번에 정답 맞추기
+
+### 🔒 순차적 학습 시스템
+- 이전 단계를 완료해야 다음 단계 잠금 해제
+- 체계적인 학습 경로 제공
+- 학습 진행 상황 시각화
+
+### 📚 학습 모드
+- **학습 모드**: 학습 내용 확인 → 퀴즈 풀기 → 정답 맞추면 다음 단계
+- **시험 모드**: 타이머와 함께 실전 테스트
+- **복습 모드**: 틀린 문제만 다시 풀기
+
+### 💾 로컬 스토리지
+- 학습 진행 상황 자동 저장
+- 포인트, 레벨, 배지 정보 유지
+- 연속 학습일 기록
+
+### 🎉 성취감 요소
+- 레벨업 알림
+- 배지 획득 알림
+- 완료 시 보상 안내
+- 다양한 애니메이션 효과
+
+## 🚀 시작하기
 
 **Prerequisites:**  Node.js
 
+1. 의존성 설치:
+   ```bash
+   npm install
+   ```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+2. Gemini API 키 설정:
+   [.env.local](.env.local) 파일에 `GEMINI_API_KEY` 설정
+
+3. 앱 실행:
+   ```bash
+   npm run dev
+   ```
+
+## 🛠️ 기술 스택
+
+- **React + TypeScript**: UI 개발
+- **Tailwind CSS**: 스타일링
+- **Gemini API**: AI 기반 맞춤형 해설 생성
+- **Vite**: 빌드 도구
+
+## 📖 학습 주제
+
+- Let's Facilitation!
+- 퍼실리테이터의 역할
+- 발산과 수렴
+- 브레인스토밍
+- 브레인 라이팅
+- 원더링 플립차트
+- 분류-제목-결정 단계
+- 중복 투표, 신호등 투표
+- 랜덤워드
+- 6 Hat
+- Scamper(질문기법)
+- Meta-Decision
+- Pay-Off 분석
+- 사실과 평가 구분하기
+- 피드백
+- 되말하기
+- 차트기록
+- 질문 브레인스토밍
+- 사고의 흐름(4F)
+- FT 디자인
+- 3P 분석
+- 프로세스 설계
+- 설계 방법론
+- 오프닝
+- 클로징
+- 라운드&패스
+
+## 🎁 완료 보상
+
+모든 학습을 완료하면 특별한 보상이 기다리고 있습니다!
+완료 화면을 운영진에게 보여주세요. 😊
+
+---
+
+View your app in AI Studio: https://ai.studio/apps/drive/19wJTaIvcMbvjaMJ0xVCYrefzR6_xarif

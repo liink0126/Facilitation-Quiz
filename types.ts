@@ -36,3 +36,21 @@ export interface QuizMode {
   allowRetry: boolean;
   showExplanation: boolean;
 }
+
+// 게이미피케이션 요소
+export interface Gamification {
+  points: number;
+  level: number;
+  badges: string[];
+  streak: number; // 연속 학습일
+  lastStudyDate: string;
+  completedTopicsCount: number;
+}
+
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  condition: (gamification: Gamification) => boolean;
+}

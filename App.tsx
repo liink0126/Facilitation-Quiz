@@ -4,12 +4,24 @@ import QuizArea from './components/QuizArea';
 import { TOPICS } from './constants';
 import { QUIZ_DATA } from './quizData';
 import { TOPIC_CONTENT } from './content';
-import type { Quiz } from './types';
+import type { Quiz, Gamification, Badge } from './types';
 import { MenuIcon } from './components/icons';
 import { generatePersonalizedExplanation } from './services/geminiService';
 
 const QUIZ_DURATION = 40; // seconds
-const STORAGE_KEY = 'facilitation-quiz-progress';
+const STORAGE_KEY = 'liink-challengers-progress';
+
+// 배지 정의
+const BADGES: Badge[] = [
+  { id: 'first_step', name: '첫 걸음', description: '첫 번째 학습 완료', icon: '🎯', condition: (g) => g.completedTopicsCount >= 1 },
+  { id: 'beginner', name: '초보 챌린저', description: '5개 학습 완료', icon: '⭐', condition: (g) => g.completedTopicsCount >= 5 },
+  { id: 'intermediate', name: '중급 챌린저', description: '10개 학습 완료', icon: '🌟', condition: (g) => g.completedTopicsCount >= 10 },
+  { id: 'advanced', name: '고급 챌린저', description: '15개 학습 완료', icon: '✨', condition: (g) => g.completedTopicsCount >= 15 },
+  { id: 'master', name: '마스터 챌린저', description: '모든 학습 완료', icon: '🏆', condition: (g) => g.completedTopicsCount >= TOPICS.length },
+  { id: 'streak_3', name: '꾸준함', description: '3일 연속 학습', icon: '🔥', condition: (g) => g.streak >= 3 },
+  { id: 'streak_7', name: '습관의 힘', description: '7일 연속 학습', icon: '💪', condition: (g) => g.streak >= 7 },
+  { id: 'perfectionist', name: '완벽주의자', description: '한 번에 정답 맞추기', icon: '💯', condition: (g) => g.points >= 100 },
+];
 
 // 틀린 문제 정보를 저장하는 타입
 interface IncorrectAnswer {
@@ -36,6 +48,9 @@ interface SavedProgress {
   currentTopicIndex: number;
   quizMode: QuizMode;
   statistics: Statistics;
+  gamification: Gamification;
+  unlockedTopics: number; // 잠금 해제된 주제 인덱스
+  viewedContent: string[]; // 학습 내용을 본 주제들
 }
 
 export default function App(): React.ReactElement {
@@ -61,6 +76,18 @@ export default function App(): React.ReactElement {
     totalIncorrect: 0,
     topicStats: {}
   });
+  const [gamification, setGamification] = useState<Gamification>({
+    points: 0,
+    level: 1,
+    badges: [],
+    streak: 0,
+    lastStudyDate: '',
+    completedTopicsCount: 0
+  });
+  const [unlockedTopics, setUnlockedTopics] = useState(0); // 잠금 해제된 주제 수 (0이면 첫 번째만)
+  const [viewedContent, setViewedContent] = useState<Set<string>>(new Set());
+  const [showBadgeNotification, setShowBadgeNotification] = useState<Badge | null>(null);
+  const [showLevelUp, setShowLevelUp] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const startTimeRef = useRef<number>(Date.now());
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -105,6 +132,56 @@ export default function App(): React.ReactElement {
   }, [quizMode, incorrectTopics]);
   const isQuizComplete = answeredTopics.size === topicsWithQuizzes.length;
   
+  // 게이미피케이션: 포인트 계산
+  const calculatePoints = useCallback((isCorrect: boolean, timeLeft: number, attempts: number) => {
+    if (!isCorrect) return 0;
+    let points = 10; // 기본 점수
+    if (attempts === 1) points += 10; // 한 번에 맞추면 보너스
+    if (timeLeft > 30) points += 5; // 빠르게 풀면 보너스
+    return points;
+  }, []);
+
+  // 게이미피케이션: 레벨 계산
+  const calculateLevel = useCallback((points: number) => {
+    return Math.floor(points / 100) + 1;
+  }, []);
+
+  // 게이미피케이션: 연속 학습일 업데이트
+  const updateStreak = useCallback(() => {
+    const today = new Date().toDateString();
+    setGamification(prev => {
+      const yesterday = new Date(Date.now() - 86400000).toDateString();
+      if (prev.lastStudyDate === today) {
+        return prev; // 오늘 이미 학습함
+      } else if (prev.lastStudyDate === yesterday) {
+        // 어제 학습했으면 연속 증가
+        return { ...prev, streak: prev.streak + 1, lastStudyDate: today };
+      } else if (prev.lastStudyDate === '') {
+        // 첫 학습
+        return { ...prev, streak: 1, lastStudyDate: today };
+      } else {
+        // 연속 끊김
+        return { ...prev, streak: 1, lastStudyDate: today };
+      }
+    });
+  }, []);
+
+  // 게이미피케이션: 배지 확인 및 부여
+  const checkAndAwardBadges = useCallback((newGamification: Gamification) => {
+    const newBadges: string[] = [];
+    BADGES.forEach(badge => {
+      if (!newGamification.badges.includes(badge.id) && badge.condition(newGamification)) {
+        newBadges.push(badge.id);
+        // 배지 알림 표시
+        setShowBadgeNotification(badge);
+        setTimeout(() => setShowBadgeNotification(null), 3000);
+      }
+    });
+    if (newBadges.length > 0) {
+      setGamification(prev => ({ ...prev, badges: [...prev.badges, ...newBadges] }));
+    }
+  }, []);
+
   // 통계 업데이트
   const updateStatistics = useCallback((topic: string, isCorrect: boolean) => {
     setStatistics(prev => {
@@ -139,9 +216,20 @@ export default function App(): React.ReactElement {
     }
   }, [quizMode]);
 
+  // 학습 내용 보기 완료 처리
+  const handleContentViewed = useCallback((topic: string) => {
+    setViewedContent(prev => new Set([...prev, topic]));
+  }, []);
+
   // 핸들러 함수들을 먼저 정의
   const handleSelectTopic = useCallback((index: number): void => {
     if (index < 0 || index >= TOPICS.length) return;
+    
+    // 잠금 확인 (학습 모드일 때만)
+    if (quizMode === 'learning' && index > unlockedTopics) {
+      setError(`이전 단계를 먼저 완료해주세요. 현재 ${TOPICS[unlockedTopics]} 단계까지 진행 가능합니다.`);
+      return;
+    }
     
     setCurrentTopicIndex(index);
     setUserSelection(null);
@@ -166,7 +254,7 @@ export default function App(): React.ReactElement {
     } else {
       setQuiz((quizData && quizData.question) ? quizData : null);
     }
-  }, []);
+  }, [quizMode, unlockedTopics]);
 
   const handleOptionSelect = useCallback(async (option: string): Promise<void> => {
     if (userSelection) return;
@@ -193,6 +281,46 @@ export default function App(): React.ReactElement {
       setUserSelection(option);
       updateStatistics(topicKey, true);
       
+      // 게이미피케이션: 포인트 부여
+      const attempts = incorrectSelections.length + 1;
+      const earnedPoints = calculatePoints(true, timeLeft, attempts);
+      const newPoints = gamification.points + earnedPoints;
+      const newLevel = calculateLevel(newPoints);
+      const leveledUp = newLevel > gamification.level;
+      
+      setGamification(prev => {
+        const newGamification = {
+          ...prev,
+          points: newPoints,
+          level: newLevel,
+          completedTopicsCount: prev.completedTopicsCount + (answeredTopics.has(topicKey) ? 0 : 1)
+        };
+        // 배지 확인
+        checkAndAwardBadges(newGamification);
+        return newGamification;
+      });
+      
+      // 연속 학습일 업데이트
+      updateStreak();
+      
+      // 레벨업 알림
+      if (leveledUp) {
+        setShowLevelUp(true);
+        setTimeout(() => setShowLevelUp(false), 3000);
+      }
+      
+      // 잠금 해제 (학습 모드일 때만)
+      if (quizMode === 'learning' && currentTopicIndex === unlockedTopics) {
+        setUnlockedTopics(prev => Math.min(prev + 1, TOPICS.length - 1));
+        
+        // 학습 모드에서는 정답 맞추면 3초 후 자동으로 다음 단계로 이동
+        if (!isDesignMethodology && currentTopicIndex < TOPICS.length - 1) {
+          setTimeout(() => {
+            handleSelectTopic(currentTopicIndex + 1);
+          }, 3000);
+        }
+      }
+      
       // 설계 방법론의 경우 다음 문제로 이동
       if (isDesignMethodology && currentMethodologyQuizIndex < DESIGN_METHODOLOGY_QUIZZES.length - 1) {
         // 다음 문제로 이동
@@ -208,7 +336,12 @@ export default function App(): React.ReactElement {
           if (nextQuiz) {
             setQuiz(nextQuiz);
           }
-        }, 2000); // 2초 후 다음 문제로 이동
+        }, 3000); // 3초 후 다음 문제로 이동
+      } else if (isDesignMethodology && currentMethodologyQuizIndex === DESIGN_METHODOLOGY_QUIZZES.length - 1 && quizMode === 'learning' && currentTopicIndex < TOPICS.length - 1) {
+        // 설계 방법론의 마지막 문제를 맞추면 다음 주제로 이동
+        setTimeout(() => {
+          handleSelectTopic(currentTopicIndex + 1);
+        }, 3000);
       }
       
       // 틀렸던 문제를 다시 맞췄는지 확인
@@ -246,7 +379,7 @@ export default function App(): React.ReactElement {
         }
       } else {
         // 처음부터 맞춘 경우
-        setAnsweredTopics(newAnsweredTopics);
+      setAnsweredTopics(newAnsweredTopics);
         // 설계 방법론의 경우 다음 문제로 이동 (위에서 이미 처리됨)
       }
     } else {
@@ -268,7 +401,7 @@ export default function App(): React.ReactElement {
       // 틀렸을 때는 userSelection을 설정하지 않아서 계속 선택할 수 있게 함
       // 정답을 맞출 때까지 계속 시도 가능
     }
-  }, [userSelection, selectedTopic, incorrectSelections, answeredTopics, incorrectAnswers, updateStatistics]);
+  }, [userSelection, selectedTopic, incorrectSelections, answeredTopics, incorrectAnswers, updateStatistics, currentTopicIndex, currentMethodologyQuizIndex, quizMode, unlockedTopics, isDesignMethodology, timeLeft, calculatePoints, gamification.points, gamification.level, calculateLevel, checkAndAwardBadges, updateStreak, handleSelectTopic]);
 
   // 로컬 스토리지에서 진행 상황 로드
   useEffect(() => {
@@ -286,6 +419,22 @@ export default function App(): React.ReactElement {
         setQuizMode(progress.quizMode || 'learning');
         if (progress.statistics) {
           setStatistics(progress.statistics);
+        }
+        if (progress.gamification) {
+          setGamification(progress.gamification);
+          // 연속 학습일 확인
+          const today = new Date().toDateString();
+          const yesterday = new Date(Date.now() - 86400000).toDateString();
+          if (progress.gamification.lastStudyDate !== today && progress.gamification.lastStudyDate !== yesterday && progress.gamification.lastStudyDate !== '') {
+            // 연속 끊김
+            setGamification(prev => ({ ...prev, streak: 0 }));
+          }
+        }
+        if (progress.unlockedTopics !== undefined) {
+          setUnlockedTopics(progress.unlockedTopics);
+        }
+        if (progress.viewedContent) {
+          setViewedContent(new Set(progress.viewedContent));
         }
       }
     } catch (error) {
@@ -305,13 +454,16 @@ export default function App(): React.ReactElement {
         })),
         currentTopicIndex,
         quizMode,
-        statistics
+        statistics,
+        gamification,
+        unlockedTopics,
+        viewedContent: Array.from(viewedContent)
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
     } catch (error) {
       console.error('진행 상황 저장 실패:', error);
     }
-  }, [answeredTopics, incorrectAnswers, currentTopicIndex, quizMode, statistics]);
+  }, [answeredTopics, incorrectAnswers, currentTopicIndex, quizMode, statistics, gamification, unlockedTopics, viewedContent]);
 
   // 초기 로드 시 저장된 위치로 이동
   useEffect(() => {
@@ -496,6 +648,33 @@ export default function App(): React.ReactElement {
           aria-hidden="true"
         ></div>
       )}
+      
+      {/* 배지 획득 알림 */}
+      {showBadgeNotification && (
+        <div className="fixed top-4 right-4 z-50 animate-bounce">
+          <div className="bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3">
+            <span className="text-4xl">{showBadgeNotification.icon}</span>
+            <div>
+              <p className="font-bold text-lg">새 배지 획득!</p>
+              <p className="text-sm">{showBadgeNotification.name}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 레벨업 알림 */}
+      {showLevelUp && (
+        <div className="fixed top-4 right-4 z-50 animate-pulse">
+          <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3">
+            <span className="text-4xl">🎉</span>
+            <div>
+              <p className="font-bold text-lg">레벨 업!</p>
+              <p className="text-sm">레벨 {gamification.level}에 도달했습니다!</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <Sidebar 
         topics={TOPICS} 
         selectedTopic={selectedTopic}
@@ -514,6 +693,8 @@ export default function App(): React.ReactElement {
         statistics={statistics}
         quizMode={quizMode}
         onQuizModeChange={setQuizMode}
+        gamification={gamification}
+        unlockedTopics={unlockedTopics}
       />
       <main className={`flex-1 p-4 sm:p-6 md:p-8 lg:p-10 overflow-y-auto transition-all duration-300 bg-slate-50`}>
          <header className="sm:hidden mb-4 flex items-center">
@@ -524,7 +705,7 @@ export default function App(): React.ReactElement {
           >
             <MenuIcon />
           </button>
-          <h1 className="text-lg font-bold text-[#d83968] ml-2">Let's Facilitation!</h1>
+          <h1 className="text-lg font-bold text-[#d83968] ml-2">Liink Challengers</h1>
         </header>
         <QuizArea
           selectedTopic={isDesignMethodology ? `설계 방법론 (${currentMethodologyQuizIndex + 1}/${DESIGN_METHODOLOGY_QUIZZES.length})` : selectedTopic}
@@ -549,6 +730,10 @@ export default function App(): React.ReactElement {
           totalQuestions={isDesignMethodology ? DESIGN_METHODOLOGY_QUIZZES.length : topicsWithQuizzes.length}
           hasTimer={quizModeSettings.hasTimer}
           showContent={quizModeSettings.showContent}
+          quizMode={quizMode}
+          viewedContent={viewedContent}
+          onContentViewed={handleContentViewed}
+          gamification={gamification}
         />
       </main>
     </div>

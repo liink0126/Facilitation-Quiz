@@ -1,5 +1,6 @@
 import React from 'react';
 import { XIcon } from './icons';
+import type { Gamification } from '../types';
 
 interface SidebarProps {
   topics: string[];
@@ -22,6 +23,8 @@ interface SidebarProps {
   };
   quizMode?: 'learning' | 'exam' | 'review';
   onQuizModeChange?: (mode: 'learning' | 'exam' | 'review') => void;
+  gamification?: Gamification;
+  unlockedTopics?: number;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -39,7 +42,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   totalTopics = 0,
   statistics,
   quizMode = 'learning',
-  onQuizModeChange
+  onQuizModeChange,
+  gamification,
+  unlockedTopics = 0
 }) => {
   const filteredTopics = showOnlyIncorrect 
     ? topics.filter((topic, index) => incorrectTopics.has(topic))
@@ -73,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside className={`w-56 lg:w-64 h-full bg-white shadow-xl flex-shrink-0 overflow-y-auto fixed sm:relative inset-y-0 left-0 z-30 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0`}>
       <div className="flex justify-between items-center p-4">
-        <h1 className="text-lg font-bold text-[#d83968]">Let's Facilitation!</h1>
+        <h1 className="text-lg font-bold text-[#d83968]">Liink Challengers</h1>
         <div className="flex items-center gap-2">
           <button 
             className="hidden sm:block text-slate-500 hover:text-slate-800 p-1" 
@@ -84,11 +89,56 @@ const Sidebar: React.FC<SidebarProps> = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <button className="sm:hidden text-slate-500 hover:text-slate-800" onClick={onClose} aria-label="Close menu">
-            <XIcon />
-          </button>
-        </div>
+        <button className="sm:hidden text-slate-500 hover:text-slate-800" onClick={onClose} aria-label="Close menu">
+          <XIcon />
+        </button>
       </div>
+      </div>
+      
+      {/* 게이미피케이션 정보 */}
+      {gamification && (
+        <div className="mx-3 mb-3 p-3 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🏆</span>
+              <div>
+                <p className="text-xs text-slate-500">레벨</p>
+                <p className="text-lg font-bold text-purple-700">{gamification.level}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">포인트</p>
+              <p className="text-lg font-bold text-pink-700">{gamification.points}</p>
+            </div>
+          </div>
+          {gamification.streak > 0 && (
+            <div className="flex items-center gap-2 mt-2 p-2 bg-white/60 rounded">
+              <span className="text-xl">🔥</span>
+              <p className="text-xs text-slate-700"><span className="font-bold">{gamification.streak}일</span> 연속 학습</p>
+            </div>
+          )}
+          {gamification.badges.length > 0 && (
+            <div className="mt-2">
+              <p className="text-xs text-slate-500 mb-1">획득 배지 ({gamification.badges.length})</p>
+              <div className="flex flex-wrap gap-1">
+                {gamification.badges.slice(0, 8).map((badgeId) => {
+                  const badge = [
+                    { id: 'first_step', icon: '🎯' },
+                    { id: 'beginner', icon: '⭐' },
+                    { id: 'intermediate', icon: '🌟' },
+                    { id: 'advanced', icon: '✨' },
+                    { id: 'master', icon: '🏆' },
+                    { id: 'streak_3', icon: '🔥' },
+                    { id: 'streak_7', icon: '💪' },
+                    { id: 'perfectionist', icon: '💯' },
+                  ].find(b => b.id === badgeId);
+                  return badge ? <span key={badgeId} className="text-lg">{badge.icon}</span> : null;
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       
       {/* 진행률 및 통계 */}
       {totalTopics > 0 && (
@@ -181,11 +231,19 @@ const Sidebar: React.FC<SidebarProps> = ({
           {filteredTopics.map((topic, index) => {
             const status = getTopicStatus(topic);
             const originalIndex = topics.indexOf(topic);
+            const isLocked = quizMode === 'learning' && originalIndex > unlockedTopics;
             
             let statusColor = '';
             let statusIcon = null;
             
-            if (status === 'correct') {
+            if (isLocked) {
+              statusColor = 'bg-slate-100 opacity-60';
+              statusIcon = (
+                <svg className="w-5 h-5 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+              );
+            } else if (status === 'correct') {
               statusColor = 'border-l-4 border-emerald-500 bg-emerald-50';
               statusIcon = (
                 <svg className="w-5 h-5 text-emerald-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -202,26 +260,31 @@ const Sidebar: React.FC<SidebarProps> = ({
             }
             
             return (
-              <li key={topic}>
-                <button
-                  onClick={() => {
+            <li key={topic}>
+              <button
+                onClick={() => {
+                  if (!isLocked) {
                     onSelectTopic(originalIndex);
                     onClose();
-                  }}
+                  }
+                }}
+                disabled={isLocked}
                   className={`w-full text-left px-3 py-2.5 my-0.5 text-sm rounded-md transition-all duration-150 flex items-center gap-2.5 ${
-                    selectedTopic === topic
-                      ? 'bg-pink-100 text-[#d83968] font-bold'
+                  isLocked 
+                    ? 'cursor-not-allowed text-slate-400'
+                    : selectedTopic === topic
+                    ? 'bg-pink-100 text-[#d83968] font-bold'
                       : status === 'correct'
                       ? 'text-emerald-800 hover:bg-emerald-100'
                       : status === 'incorrect'
                       ? 'text-rose-800 hover:bg-rose-100'
-                      : 'text-slate-600 hover:bg-pink-50 hover:text-slate-900'
+                    : 'text-slate-600 hover:bg-pink-50 hover:text-slate-900'
                   } ${statusColor}`}
-                >
+              >
                   {statusIcon}
                   <span className="truncate leading-relaxed">{topic}</span>
-                </button>
-              </li>
+              </button>
+            </li>
             );
           })}
         </ul>

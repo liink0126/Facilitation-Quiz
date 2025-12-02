@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import type { Quiz, MatchingQuiz } from '../types';
+import type { Quiz, MatchingQuiz, Gamification } from '../types';
 import { AcademicCapIcon, CheckCircleIcon, XCircleIcon, ArrowRightIcon, ClockIcon, ArrowLeftIcon } from './icons';
 
 const MatchingQuizComponent: React.FC<{
@@ -147,6 +147,10 @@ interface QuizAreaProps {
   totalQuestions?: number;
   hasTimer?: boolean;
   showContent?: boolean;
+  quizMode?: 'learning' | 'exam' | 'review';
+  viewedContent?: Set<string>;
+  onContentViewed?: (topic: string) => void;
+  gamification?: Gamification;
 }
 
 const QuizArea: React.FC<QuizAreaProps> = ({
@@ -172,10 +176,47 @@ const QuizArea: React.FC<QuizAreaProps> = ({
   totalQuestions = 0,
   hasTimer = true,
   showContent = false,
+  quizMode = 'learning',
+  viewedContent = new Set(),
+  onContentViewed,
+  gamification,
 }) => {
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
   
-  // 학습 모드일 때는 학습 내용만 표시
+  // 학습 모드에서 학습 내용 보기
+  const topicName = selectedTopic?.replace(/ \(\d+\/\d+\)$/, '') || ''; // "설계 방법론 (1/4)" -> "설계 방법론"
+  const hasViewedContent = viewedContent.has(topicName);
+  
+  // 학습 모드일 때는 학습 내용을 먼저 보고, 확인 버튼을 누르면 퀴즈로 이동
+  if (quizMode === 'learning' && topicContent && !hasViewedContent) {
+    return (
+      <div className="max-w-4xl mx-auto animate-fade-in-up">
+        {selectedTopic && (
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-800 mb-8">
+            {selectedTopic}
+          </h2>
+        )}
+        <div 
+          className="content-area prose prose-slate max-w-none mb-8"
+          dangerouslySetInnerHTML={{ __html: topicContent }}
+        />
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={() => {
+              if (onContentViewed) {
+                onContentViewed(topicName);
+              }
+            }}
+            className="px-8 py-4 bg-gradient-to-r from-[#d83968] to-pink-600 text-white font-bold text-lg rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+          >
+            학습 완료! 퀴즈 풀러 가기 →
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // 일반 학습 모드 (showContent가 true일 때)
   if (showContent && topicContent) {
     return (
       <div className="max-w-4xl mx-auto animate-fade-in-up">
@@ -203,7 +244,7 @@ const QuizArea: React.FC<QuizAreaProps> = ({
             </svg>
             <div>
               <h3 className="font-bold text-lg mb-1">알림</h3>
-              <p>{error}</p>
+          <p>{error}</p>
             </div>
           </div>
         </div>
@@ -229,10 +270,45 @@ const QuizArea: React.FC<QuizAreaProps> = ({
   if (isQuizComplete) {
     return (
        <div className="flex items-center justify-center h-full">
-        <div className="text-center p-8 bg-white rounded-xl shadow-lg">
-          <CheckCircleIcon className="mx-auto h-16 w-16 text-emerald-500" />
-          <h2 className="mt-6 text-3xl font-bold text-slate-800">모든 퀴즈를 완료했습니다!</h2>
-          <p className="mt-4 text-lg text-slate-600">수고하셨습니다. 모든 학습 내용을 성공적으로 마쳤습니다.</p>
+        <div className="text-center p-10 bg-gradient-to-br from-purple-50 via-pink-50 to-yellow-50 rounded-2xl shadow-2xl max-w-2xl animate-fade-in-up">
+          <div className="text-6xl mb-6 animate-bounce">🎉</div>
+          <CheckCircleIcon className="mx-auto h-20 w-20 text-emerald-500 mb-4" />
+          <h2 className="mt-4 text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+            축하합니다!
+          </h2>
+          <h3 className="mt-2 text-2xl font-bold text-slate-800">
+            모든 학습을 완료했습니다! 🏆
+          </h3>
+          <p className="mt-6 text-lg text-slate-700 leading-relaxed">
+            정말 수고하셨습니다!<br/>
+            모든 퍼실리테이션 기법을 마스터하셨네요.
+          </p>
+          
+          {gamification && (
+            <div className="mt-8 p-6 bg-white rounded-xl shadow-md">
+              <h4 className="text-lg font-bold text-slate-700 mb-4">최종 성적</h4>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-3xl font-bold text-purple-600">{gamification.level}</p>
+                  <p className="text-sm text-slate-500">레벨</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-pink-600">{gamification.points}</p>
+                  <p className="text-sm text-slate-500">포인트</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-yellow-600">{gamification.badges.length}</p>
+                  <p className="text-sm text-slate-500">배지</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div className="mt-8 p-6 bg-gradient-to-r from-yellow-100 to-orange-100 rounded-xl border-2 border-yellow-300">
+            <p className="text-2xl mb-2">🎁</p>
+            <p className="text-lg font-bold text-slate-800">특별한 보상이 기다리고 있어요!</p>
+            <p className="text-sm text-slate-600 mt-2">운영진에게 완료 화면을 보여주세요 😊</p>
+          </div>
         </div>
       </div>
     )
@@ -248,7 +324,7 @@ const QuizArea: React.FC<QuizAreaProps> = ({
           </div>
         )}
       </div>
-      
+
       <div className="bg-white p-4 sm:p-6 md:p-8 rounded-xl shadow-md">
         {hasQuiz && quiz.type === 'matching' && (
            <MatchingQuizComponent quiz={quiz as MatchingQuiz} onOptionSelect={onOptionSelect} hasAnswered={hasAnswered} />
@@ -261,19 +337,19 @@ const QuizArea: React.FC<QuizAreaProps> = ({
                 <div className="flex justify-between items-center mb-3">
                   <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                     <ClockIcon className="w-5 h-5 text-pink-600" />
-                    남은 시간
-                  </span>
+                  남은 시간
+                </span>
                   <span className="text-lg font-bold text-pink-700">{timeLeft}초</span>
-                </div>
+              </div>
                 <div className="w-full bg-white/60 rounded-full h-3 shadow-inner">
-                  <div 
+                <div 
                     className={`h-3 rounded-full transition-all duration-500 ease-linear ${
                       timeLeft <= 10 ? 'bg-red-500' : timeLeft <= 20 ? 'bg-orange-500' : 'bg-pink-500'
                     }`}
-                    style={{ width: `${(timeLeft / quizDuration) * 100}%` }}
-                  ></div>
-                </div>
+                  style={{ width: `${(timeLeft / quizDuration) * 100}%` }}
+                ></div>
               </div>
+            </div>
             )}
 
             <div className="bg-gradient-to-br from-slate-50 to-blue-50 p-5 sm:p-6 md:p-8 rounded-xl border border-slate-200 shadow-sm animate-fade-in-up">
@@ -315,9 +391,9 @@ const QuizArea: React.FC<QuizAreaProps> = ({
 
                 // 정답을 맞췄을 때만 정답 표시
                 if (isCorrectAnswer) {
-                  buttonStyle = 'bg-emerald-50 border-emerald-500 text-emerald-900 font-semibold';
-                  iconStyle = 'bg-emerald-200 text-emerald-800';
-                  showCorrectIcon = true;
+                    buttonStyle = 'bg-emerald-50 border-emerald-500 text-emerald-900 font-semibold animate-celebrate';
+                    iconStyle = 'bg-emerald-200 text-emerald-800';
+                    showCorrectIcon = true;
                 } else if (hasIncorrectAnswer) {
                   // 틀렸을 때는 선택한 답만 표시하고, 정답은 표시하지 않음
                   // 계속 선택 가능하도록 함
@@ -391,6 +467,21 @@ const QuizArea: React.FC<QuizAreaProps> = ({
           </div>
         )}
 
+        {/* 정답을 맞췄을 때 축하 메시지 */}
+        {hasAnswered && quiz?.question && !hasIncorrectAnswer && userSelection !== 'TIME_UP' && (
+          <div className="mt-6 animate-fade-in">
+            <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-100 to-green-100 border-2 border-emerald-400 shadow-lg flex items-center gap-3">
+              <span className="text-4xl animate-bounce">🎉</span>
+              <div>
+                <p className="text-lg font-bold text-emerald-800">정답입니다!</p>
+                <p className="text-sm text-emerald-700">
+                  {incorrectSelections.length === 0 ? '완벽해요! +10 보너스 포인트' : '잘하셨어요!'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* 정답을 맞췄을 때만 해설 표시 */}
         {hasAnswered && quiz?.question && !hasIncorrectAnswer && (
           <div className="mt-6 animate-fade-in space-y-4">

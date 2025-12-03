@@ -182,6 +182,7 @@ const QuizArea: React.FC<QuizAreaProps> = ({
   onContentViewed,
   gamification,
   passedExams = new Set(),
+  onNextQuiz,
 }) => {
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
   
@@ -529,12 +530,32 @@ const QuizArea: React.FC<QuizAreaProps> = ({
           <div className="mt-6 animate-fade-in">
             <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-100 to-green-100 border-2 border-emerald-400 shadow-lg flex items-center gap-3">
               <span className="text-4xl animate-bounce">🎉</span>
-              <div>
+              <div className="flex-1">
                 <p className="text-lg font-bold text-emerald-800">정답입니다!</p>
                 <p className="text-sm text-emerald-700">
                   {incorrectSelections.length === 0 ? '완벽해요! +10 보너스 포인트' : '잘하셨어요!'}
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+        
+        {/* 시험 통과 후 다음 학습 이어가기 버튼 */}
+        {hasAnswered && quiz?.question && !hasIncorrectAnswer && quizMode === 'exam' && (
+          <div className="mt-6 animate-fade-in">
+            <div className="p-6 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-300 shadow-lg text-center">
+              <div className="text-5xl mb-4">🎊</div>
+              <h3 className="text-xl font-bold text-purple-800 mb-2">시험 통과!</h3>
+              <p className="text-purple-700 mb-6">
+                축하합니다! 다음 학습 내용이 열렸습니다.
+              </p>
+              <button
+                type="button"
+                onClick={onNextQuiz}
+                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 cursor-pointer"
+              >
+                다음 학습 이어가기 →
+              </button>
             </div>
           </div>
         )}

@@ -392,21 +392,6 @@ export default function App(): React.ReactElement {
         if (currentTopicIndex === unlockedTopics) {
           setUnlockedTopics(prev => Math.min(prev + 1, TOPICS.length - 1));
         }
-        
-        // 시험 통과 후 3초 후 자동으로 다음 단계로 이동
-        if (!isDesignMethodology && currentTopicIndex < TOPICS.length - 1) {
-          setTimeout(() => {
-            // 다음 주제가 잠금 해제되었으므로 학습 모드로 전환하여 다음 주제 학습 가능하게 함
-            setQuizMode('learning');
-            handleSelectTopic(currentTopicIndex + 1);
-          }, 3000);
-        } else if (isDesignMethodology && currentMethodologyQuizIndex === DESIGN_METHODOLOGY_QUIZZES.length - 1 && currentTopicIndex < TOPICS.length - 1) {
-          // 설계 방법론의 마지막 문제를 맞추면 다음 주제로 이동
-          setTimeout(() => {
-            setQuizMode('learning');
-            handleSelectTopic(currentTopicIndex + 1);
-          }, 3000);
-        }
       }
       
       // 설계 방법론의 경우 다음 문제로 이동
@@ -829,6 +814,7 @@ export default function App(): React.ReactElement {
           onContentViewed={handleContentViewed}
           gamification={gamification}
           passedExams={passedExams}
+          onNextQuiz={handleNextQuestion}
         />
       </main>
     </div>

@@ -218,8 +218,14 @@ export default function App(): React.ReactElement {
 
   // 학습 내용 보기 완료 처리
   const handleContentViewed = useCallback((topic: string) => {
-    setViewedContent(prev => new Set([...prev, topic]));
-  }, []);
+    console.log('학습 완료 처리:', topic);
+    console.log('현재 viewedContent:', viewedContent);
+    setViewedContent(prev => {
+      const newSet = new Set([...prev, topic]);
+      console.log('업데이트된 viewedContent:', newSet);
+      return newSet;
+    });
+  }, [viewedContent]);
 
   // 핸들러 함수들을 먼저 정의
   const handleSelectTopic = useCallback((index: number): void => {

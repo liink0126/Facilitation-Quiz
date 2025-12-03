@@ -189,6 +189,16 @@ const QuizArea: React.FC<QuizAreaProps> = ({
   
   // 학습 모드일 때는 학습 내용을 먼저 보고, 확인 버튼을 누르면 퀴즈로 이동
   if (quizMode === 'learning' && topicContent && !hasViewedContent) {
+    const handleContentComplete = () => {
+      console.log('학습 완료 버튼 클릭!', topicName);
+      if (onContentViewed) {
+        onContentViewed(topicName);
+        console.log('onContentViewed 호출 완료');
+      } else {
+        console.error('onContentViewed가 정의되지 않았습니다!');
+      }
+    };
+    
     return (
       <div className="max-w-4xl mx-auto animate-fade-in-up">
         {selectedTopic && (
@@ -200,17 +210,17 @@ const QuizArea: React.FC<QuizAreaProps> = ({
           className="content-area prose prose-slate max-w-none mb-8"
           dangerouslySetInnerHTML={{ __html: topicContent }}
         />
-        <div className="flex justify-center mt-8">
+        <div className="flex justify-center mt-8 mb-12">
           <button
-            onClick={() => {
-              if (onContentViewed) {
-                onContentViewed(topicName);
-              }
-            }}
-            className="px-8 py-4 bg-gradient-to-r from-[#d83968] to-pink-600 text-white font-bold text-lg rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+            type="button"
+            onClick={handleContentComplete}
+            className="px-8 py-4 bg-gradient-to-r from-[#d83968] to-pink-600 text-white font-bold text-lg rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 cursor-pointer relative z-10"
           >
             학습 완료! 퀴즈 풀러 가기 →
           </button>
+        </div>
+        <div className="text-center text-slate-500 text-sm mb-8">
+          ⬆️ 위 버튼을 클릭하여 퀴즈로 넘어가세요
         </div>
       </div>
     );

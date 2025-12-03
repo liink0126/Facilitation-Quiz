@@ -442,7 +442,7 @@ export default function App(): React.ReactElement {
       // 틀렸을 때는 userSelection을 설정하지 않아서 계속 선택할 수 있게 함
       // 정답을 맞출 때까지 계속 시도 가능
     }
-  }, [userSelection, selectedTopic, incorrectSelections, answeredTopics, incorrectAnswers, updateStatistics, currentTopicIndex, currentMethodologyQuizIndex, quizMode, unlockedTopics, isDesignMethodology, timeLeft, calculatePoints, gamification.points, gamification.level, calculateLevel, checkAndAwardBadges, updateStreak, handleSelectTopic, passedExams, currentQuizKey]);
+  }, [userSelection, selectedTopic, incorrectSelections, answeredTopics, incorrectAnswers, updateStatistics, currentTopicIndex, currentMethodologyQuizIndex, quizMode, unlockedTopics, timeLeft, calculatePoints, gamification, calculateLevel, checkAndAwardBadges, updateStreak, handleSelectTopic, passedExams]);
 
   // 로컬 스토리지에서 진행 상황 로드
   useEffect(() => {

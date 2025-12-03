@@ -25,6 +25,8 @@ interface SidebarProps {
   onQuizModeChange?: (mode: 'learning' | 'exam' | 'review') => void;
   gamification?: Gamification;
   unlockedTopics?: number;
+  viewedContent?: Set<string>;
+  passedExams?: Set<string>;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -44,17 +46,23 @@ const Sidebar: React.FC<SidebarProps> = ({
   quizMode = 'learning',
   onQuizModeChange,
   gamification,
-  unlockedTopics = 0
+  unlockedTopics = 0,
+  viewedContent = new Set(),
+  passedExams = new Set()
 }) => {
   const filteredTopics = showOnlyIncorrect 
     ? topics.filter((topic, index) => incorrectTopics.has(topic))
     : topics;
 
   const getTopicStatus = (topic: string) => {
-    if (incorrectTopics.has(topic)) {
-      return 'incorrect'; // 틀린 문제
+    if (passedExams.has(topic)) {
+      return 'passed'; // 시험 통과
+    } else if (viewedContent.has(topic)) {
+      return 'studied'; // 학습 완료 (시험 미통과)
+    } else if (incorrectTopics.has(topic)) {
+      return 'incorrect'; // 틀린 문제 (복습 모드)
     } else if (answeredTopics.has(topic)) {
-      return 'correct'; // 맞춘 문제
+      return 'answered'; // 답변함 (복습 모드)
     }
     return 'unanswered'; // 아직 안 푼 문제
   };
@@ -147,13 +155,13 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold text-slate-600">진행률</p>
               <p className="text-xs font-bold text-pink-700">
-                {answeredTopics.size} / {totalTopics}
+                {passedExams.size} / {totalTopics}
               </p>
             </div>
             <div className="w-full bg-slate-200 rounded-full h-2">
               <div 
                 className="bg-gradient-to-r from-pink-500 to-rose-500 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${(answeredTopics.size / totalTopics) * 100}%` }}
+                style={{ width: `${(passedExams.size / totalTopics) * 100}%` }}
               ></div>
             </div>
           </div>
@@ -231,7 +239,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           {filteredTopics.map((topic, index) => {
             const status = getTopicStatus(topic);
             const originalIndex = topics.indexOf(topic);
-            const isLocked = quizMode === 'learning' && originalIndex > unlockedTopics;
+            // 학습 모드: 잠금 해제되지 않은 주제는 잠금
+            // 시험 모드: 학습 완료하지 않은 주제는 잠금
+            const isLocked = quizMode === 'learning' 
+              ? originalIndex > unlockedTopics
+              : quizMode === 'exam' && !viewedContent.has(topic);
             
             let statusColor = '';
             let statusIcon = null;
@@ -243,11 +255,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                 </svg>
               );
-            } else if (status === 'correct') {
+            } else if (status === 'passed') {
+              // 시험 통과
               statusColor = 'border-l-4 border-emerald-500 bg-emerald-50';
               statusIcon = (
                 <svg className="w-5 h-5 text-emerald-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              );
+            } else if (status === 'studied') {
+              // 학습 완료 (시험 미통과)
+              statusColor = 'border-l-4 border-blue-500 bg-blue-50';
+              statusIcon = (
+                <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                  <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
                 </svg>
               );
             } else if (status === 'incorrect') {
@@ -255,6 +277,13 @@ const Sidebar: React.FC<SidebarProps> = ({
               statusIcon = (
                 <svg className="w-5 h-5 text-rose-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              );
+            } else if (status === 'answered') {
+              statusColor = 'border-l-4 border-yellow-500 bg-yellow-50';
+              statusIcon = (
+                <svg className="w-5 h-5 text-yellow-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                 </svg>
               );
             }
@@ -265,7 +294,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 onClick={() => {
                   if (!isLocked) {
                     onSelectTopic(originalIndex);
-                    onClose();
+                  onClose();
                   }
                 }}
                 disabled={isLocked}
@@ -274,10 +303,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                     ? 'cursor-not-allowed text-slate-400'
                     : selectedTopic === topic
                     ? 'bg-pink-100 text-[#d83968] font-bold'
-                      : status === 'correct'
+                      : status === 'passed'
                       ? 'text-emerald-800 hover:bg-emerald-100'
+                      : status === 'studied'
+                      ? 'text-blue-800 hover:bg-blue-100'
                       : status === 'incorrect'
                       ? 'text-rose-800 hover:bg-rose-100'
+                      : status === 'answered'
+                      ? 'text-yellow-800 hover:bg-yellow-100'
                     : 'text-slate-600 hover:bg-pink-50 hover:text-slate-900'
                   } ${statusColor}`}
               >

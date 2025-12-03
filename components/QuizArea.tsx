@@ -151,6 +151,7 @@ interface QuizAreaProps {
   viewedContent?: Set<string>;
   onContentViewed?: (topic: string) => void;
   gamification?: Gamification;
+  passedExams?: Set<string>;
 }
 
 const QuizArea: React.FC<QuizAreaProps> = ({
@@ -180,15 +181,19 @@ const QuizArea: React.FC<QuizAreaProps> = ({
   viewedContent = new Set(),
   onContentViewed,
   gamification,
+  passedExams = new Set(),
 }) => {
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
   
   // 학습 모드에서 학습 내용 보기
   const topicName = selectedTopic?.replace(/ \(\d+\/\d+\)$/, '') || ''; // "설계 방법론 (1/4)" -> "설계 방법론"
   const hasViewedContent = viewedContent.has(topicName);
+  const hasPassedExam = passedExams.has(topicName);
   
-  // 학습 모드일 때는 학습 내용을 먼저 보고, 확인 버튼을 누르면 퀴즈로 이동
-  if (quizMode === 'learning' && topicContent && !hasViewedContent) {
+  // 학습 모드: 학습 내용만 보여주고 퀴즈는 숨김
+  if (quizMode === 'learning' && topicContent) {
+    // 학습 완료하지 않은 경우
+    if (!hasViewedContent) {
     const handleContentComplete = () => {
       console.log('학습 완료 버튼 클릭!', topicName);
       if (onContentViewed) {
@@ -216,18 +221,41 @@ const QuizArea: React.FC<QuizAreaProps> = ({
             onClick={handleContentComplete}
             className="px-8 py-4 bg-gradient-to-r from-[#d83968] to-pink-600 text-white font-bold text-lg rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 cursor-pointer relative z-10"
           >
-            학습 완료! 퀴즈 풀러 가기 →
+            학습 완료! 시험 모드로 이동 →
           </button>
         </div>
         <div className="text-center text-slate-500 text-sm mb-8">
-          ⬆️ 위 버튼을 클릭하여 퀴즈로 넘어가세요
+          ⬆️ 위 버튼을 클릭하여 학습을 완료하세요. 시험 모드에서 퀴즈를 풀 수 있습니다.
+        </div>
+      </div>
+    );
+    }
+    
+    // 학습 완료한 경우 안내 메시지
+    return (
+      <div className="max-w-4xl mx-auto animate-fade-in-up">
+        {selectedTopic && (
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-800 mb-8">
+            {selectedTopic}
+          </h2>
+        )}
+        <div className="p-8 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border-2 border-emerald-300 shadow-lg text-center">
+          <div className="text-6xl mb-4">✅</div>
+          <h3 className="text-2xl font-bold text-emerald-800 mb-4">학습 완료!</h3>
+          <p className="text-lg text-slate-700 mb-6">
+            이 주제의 학습을 완료하셨습니다.<br/>
+            이제 <strong>시험 모드</strong>로 전환하여 퀴즈를 풀어보세요!
+          </p>
+          <div className="text-sm text-slate-600">
+            💡 사이드바에서 "시험" 버튼을 클릭하여 시험 모드로 전환할 수 있습니다.
+          </div>
         </div>
       </div>
     );
   }
   
-  // 일반 학습 모드 (showContent가 true일 때)
-  if (showContent && topicContent) {
+  // 일반 학습 모드 (showContent가 true일 때) - 이제 사용되지 않음
+  if (showContent && topicContent && quizMode !== 'learning') {
     return (
       <div className="max-w-4xl mx-auto animate-fade-in-up">
         {selectedTopic && (
@@ -491,7 +519,7 @@ const QuizArea: React.FC<QuizAreaProps> = ({
             </div>
           </div>
         )}
-        
+
         {/* 정답을 맞췄을 때만 해설 표시 */}
         {hasAnswered && quiz?.question && !hasIncorrectAnswer && (
           <div className="mt-6 animate-fade-in space-y-4">

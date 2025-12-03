@@ -50,7 +50,8 @@ interface SavedProgress {
   statistics: Statistics;
   gamification: Gamification;
   unlockedTopics: number; // 잠금 해제된 주제 인덱스
-  viewedContent: string[]; // 학습 내용을 본 주제들
+  viewedContent: string[]; // 학습 내용을 본 주제들 (학습 완료)
+  passedExams: string[]; // 시험 통과한 주제들
 }
 
 export default function App(): React.ReactElement {
@@ -85,7 +86,8 @@ export default function App(): React.ReactElement {
     completedTopicsCount: 0
   });
   const [unlockedTopics, setUnlockedTopics] = useState(0); // 잠금 해제된 주제 수 (0이면 첫 번째만)
-  const [viewedContent, setViewedContent] = useState<Set<string>>(new Set());
+  const [viewedContent, setViewedContent] = useState<Set<string>>(new Set()); // 학습 완료한 주제들
+  const [passedExams, setPassedExams] = useState<Set<string>>(new Set()); // 시험 통과한 주제들
   const [showBadgeNotification, setShowBadgeNotification] = useState<Badge | null>(null);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -130,7 +132,7 @@ export default function App(): React.ReactElement {
       return QUIZ_DATA[t]?.question;
     });
   }, [quizMode, incorrectTopics]);
-  const isQuizComplete = answeredTopics.size === topicsWithQuizzes.length;
+  const isQuizComplete = passedExams.size === topicsWithQuizzes.length;
   
   // 게이미피케이션: 포인트 계산
   const calculatePoints = useCallback((isCorrect: boolean, timeLeft: number, attempts: number) => {
@@ -181,7 +183,7 @@ export default function App(): React.ReactElement {
       setGamification(prev => ({ ...prev, badges: [...prev.badges, ...newBadges] }));
     }
   }, []);
-
+  
   // 통계 업데이트
   const updateStatistics = useCallback((topic: string, isCorrect: boolean) => {
     setStatistics(prev => {
@@ -206,34 +208,44 @@ export default function App(): React.ReactElement {
   const quizModeSettings = useMemo(() => {
     switch (quizMode) {
       case 'learning':
-        return { hasTimer: false, allowRetry: true, showExplanation: true, showContent: true };
+        return { hasTimer: false, allowRetry: true, showExplanation: false, showContent: true, showQuiz: false };
       case 'exam':
-        return { hasTimer: true, allowRetry: false, showExplanation: true, showContent: false };
+        return { hasTimer: true, allowRetry: false, showExplanation: true, showContent: false, showQuiz: true };
       case 'review':
-        return { hasTimer: false, allowRetry: true, showExplanation: true, showContent: false };
+        return { hasTimer: false, allowRetry: true, showExplanation: true, showContent: false, showQuiz: true };
       default:
-        return { hasTimer: true, allowRetry: true, showExplanation: true, showContent: false };
+        return { hasTimer: true, allowRetry: true, showExplanation: true, showContent: false, showQuiz: true };
     }
   }, [quizMode]);
 
   // 학습 내용 보기 완료 처리
   const handleContentViewed = useCallback((topic: string) => {
     console.log('학습 완료 처리:', topic);
-    console.log('현재 viewedContent:', viewedContent);
     setViewedContent(prev => {
       const newSet = new Set([...prev, topic]);
       console.log('업데이트된 viewedContent:', newSet);
       return newSet;
     });
-  }, [viewedContent]);
+    // 학습 완료 후 시험 모드로 자동 전환 안내
+    setError(null);
+  }, []);
 
   // 핸들러 함수들을 먼저 정의
   const handleSelectTopic = useCallback((index: number): void => {
     if (index < 0 || index >= TOPICS.length) return;
     
-    // 잠금 확인 (학습 모드일 때만)
+    const topic = TOPICS[index];
+    const topicName = topic;
+    
+    // 잠금 확인
     if (quizMode === 'learning' && index > unlockedTopics) {
       setError(`이전 단계를 먼저 완료해주세요. 현재 ${TOPICS[unlockedTopics]} 단계까지 진행 가능합니다.`);
+      return;
+    }
+    
+    // 시험 모드에서는 학습 완료한 주제만 풀 수 있음
+    if (quizMode === 'exam' && !viewedContent.has(topicName)) {
+      setError(`먼저 학습 모드에서 "${topicName}" 주제를 학습 완료해주세요.`);
       return;
     }
     
@@ -246,7 +258,6 @@ export default function App(): React.ReactElement {
     setCurrentMethodologyQuizIndex(0); // 설계 방법론 선택 시 첫 번째 문제로 리셋
     startTimeRef.current = Date.now();
 
-    const topic = TOPICS[index];
     const isDesignMethodology = topic === "설계 방법론";
     const quizKey = isDesignMethodology ? DESIGN_METHODOLOGY_QUIZZES[0] : topic;
     const quizData = (QUIZ_DATA as Record<string, Quiz>)[quizKey];
@@ -254,13 +265,19 @@ export default function App(): React.ReactElement {
     
     setTopicContent(contentData || null);
 
-    if (!contentData && (!quizData || !quizData.question)) {
-      setError('이 주제에 대한 학습 자료가 아직 준비되지 않았습니다.');
+    // 학습 모드에서는 퀴즈를 보여주지 않음
+    if (quizMode === 'learning') {
       setQuiz(null);
     } else {
-      setQuiz((quizData && quizData.question) ? quizData : null);
+      // 시험/복습 모드에서는 퀴즈 표시
+      if (!contentData && (!quizData || !quizData.question)) {
+        setError('이 주제에 대한 학습 자료가 아직 준비되지 않았습니다.');
+        setQuiz(null);
+      } else {
+        setQuiz((quizData && quizData.question) ? quizData : null);
+      }
     }
-  }, [quizMode, unlockedTopics]);
+  }, [quizMode, unlockedTopics, viewedContent]);
 
   const handleOptionSelect = useCallback(async (option: string): Promise<void> => {
     if (userSelection) return;
@@ -299,7 +316,9 @@ export default function App(): React.ReactElement {
           ...prev,
           points: newPoints,
           level: newLevel,
-          completedTopicsCount: prev.completedTopicsCount + (answeredTopics.has(topicKey) ? 0 : 1)
+          completedTopicsCount: quizMode === 'exam' && !passedExams.has(topicKey) 
+            ? prev.completedTopicsCount + 1 
+            : prev.completedTopicsCount
         };
         // 배지 확인
         checkAndAwardBadges(newGamification);
@@ -315,13 +334,29 @@ export default function App(): React.ReactElement {
         setTimeout(() => setShowLevelUp(false), 3000);
       }
       
-      // 잠금 해제 (학습 모드일 때만)
-      if (quizMode === 'learning' && currentTopicIndex === unlockedTopics) {
-        setUnlockedTopics(prev => Math.min(prev + 1, TOPICS.length - 1));
+      // 시험 통과 처리 (시험 모드에서만)
+      if (quizMode === 'exam') {
+        // 시험 통과한 주제에 추가
+        if (!passedExams.has(topicKey)) {
+          setPassedExams(prev => new Set([...prev, topicKey]));
+        }
         
-        // 학습 모드에서는 정답 맞추면 3초 후 자동으로 다음 단계로 이동
+        // 잠금 해제 (시험 통과 시)
+        if (currentTopicIndex === unlockedTopics) {
+          setUnlockedTopics(prev => Math.min(prev + 1, TOPICS.length - 1));
+        }
+        
+        // 시험 통과 후 3초 후 자동으로 다음 단계로 이동
         if (!isDesignMethodology && currentTopicIndex < TOPICS.length - 1) {
           setTimeout(() => {
+            // 다음 주제가 잠금 해제되었으므로 학습 모드로 전환하여 다음 주제 학습 가능하게 함
+            setQuizMode('learning');
+            handleSelectTopic(currentTopicIndex + 1);
+          }, 3000);
+        } else if (isDesignMethodology && currentMethodologyQuizIndex === DESIGN_METHODOLOGY_QUIZZES.length - 1 && currentTopicIndex < TOPICS.length - 1) {
+          // 설계 방법론의 마지막 문제를 맞추면 다음 주제로 이동
+          setTimeout(() => {
+            setQuizMode('learning');
             handleSelectTopic(currentTopicIndex + 1);
           }, 3000);
         }
@@ -407,7 +442,7 @@ export default function App(): React.ReactElement {
       // 틀렸을 때는 userSelection을 설정하지 않아서 계속 선택할 수 있게 함
       // 정답을 맞출 때까지 계속 시도 가능
     }
-  }, [userSelection, selectedTopic, incorrectSelections, answeredTopics, incorrectAnswers, updateStatistics, currentTopicIndex, currentMethodologyQuizIndex, quizMode, unlockedTopics, isDesignMethodology, timeLeft, calculatePoints, gamification.points, gamification.level, calculateLevel, checkAndAwardBadges, updateStreak, handleSelectTopic]);
+  }, [userSelection, selectedTopic, incorrectSelections, answeredTopics, incorrectAnswers, updateStatistics, currentTopicIndex, currentMethodologyQuizIndex, quizMode, unlockedTopics, isDesignMethodology, timeLeft, calculatePoints, gamification.points, gamification.level, calculateLevel, checkAndAwardBadges, updateStreak, handleSelectTopic, passedExams, currentQuizKey]);
 
   // 로컬 스토리지에서 진행 상황 로드
   useEffect(() => {
@@ -442,6 +477,9 @@ export default function App(): React.ReactElement {
         if (progress.viewedContent) {
           setViewedContent(new Set(progress.viewedContent));
         }
+        if (progress.passedExams) {
+          setPassedExams(new Set(progress.passedExams));
+        }
       }
     } catch (error) {
       console.error('진행 상황 로드 실패:', error);
@@ -463,13 +501,14 @@ export default function App(): React.ReactElement {
         statistics,
         gamification,
         unlockedTopics,
-        viewedContent: Array.from(viewedContent)
+        viewedContent: Array.from(viewedContent),
+        passedExams: Array.from(passedExams)
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
     } catch (error) {
       console.error('진행 상황 저장 실패:', error);
     }
-  }, [answeredTopics, incorrectAnswers, currentTopicIndex, quizMode, statistics, gamification, unlockedTopics, viewedContent]);
+  }, [answeredTopics, incorrectAnswers, currentTopicIndex, quizMode, statistics, gamification, unlockedTopics, viewedContent, passedExams]);
 
   // 초기 로드 시 저장된 위치로 이동
   useEffect(() => {
@@ -697,11 +736,13 @@ export default function App(): React.ReactElement {
         onToggleShowOnlyIncorrect={() => setShowOnlyIncorrect(!showOnlyIncorrect)}
         totalTopics={topicsWithQuizzes.length}
         statistics={statistics}
-        quizMode={quizMode}
-        onQuizModeChange={setQuizMode}
-        gamification={gamification}
-        unlockedTopics={unlockedTopics}
-      />
+          quizMode={quizMode}
+          onQuizModeChange={setQuizMode}
+          gamification={gamification}
+          unlockedTopics={unlockedTopics}
+          viewedContent={viewedContent}
+          passedExams={passedExams}
+        />
       <main className={`flex-1 p-4 sm:p-6 md:p-8 lg:p-10 overflow-y-auto transition-all duration-300 bg-slate-50`}>
          <header className="sm:hidden mb-4 flex items-center">
           <button 
@@ -740,6 +781,7 @@ export default function App(): React.ReactElement {
           viewedContent={viewedContent}
           onContentViewed={handleContentViewed}
           gamification={gamification}
+          passedExams={passedExams}
         />
       </main>
     </div>

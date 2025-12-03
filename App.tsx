@@ -345,7 +345,8 @@ export default function App(): React.ReactElement {
     // `correctAnswer` is only available on `MultipleChoiceQuiz`.
     const isCorrect =
       (currentQuiz.type === 'multiple-choice' && option === currentQuiz.correctAnswer) ||
-      (currentQuiz.type === 'matching'); // For matching quizzes, submitting marks it as complete.
+      (currentQuiz.type === 'matching') || // For matching quizzes, submitting marks it as complete.
+      (currentQuiz.type === 'sorting' && option === 'COMPLETE'); // For sorting quizzes, COMPLETE means all correct
 
     if (isCorrect) {
       setUserSelection(option);

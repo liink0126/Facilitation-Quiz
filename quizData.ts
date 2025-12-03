@@ -1,4 +1,4 @@
-import type { Quiz } from './types';
+import type { Quiz, SortingQuiz } from './types';
 
 export const QUIZ_DATA: Record<string, Quiz> = {
   "Let's Facilitation!": {
@@ -169,17 +169,24 @@ export const QUIZ_DATA: Record<string, Quiz> = {
     explanation: "Pay-Off Matrix는 효과와 실행용이성이라는 두 가지 기준을 동시에 고려하여 우선순위를 결정할 때 가장 효과적인 도구입니다. 제한된 자원 상황에서 적은 노력으로 큰 효과를 얻을 수 있는 Quick Win 아이디어를 찾아 우선순위를 정할 수 있습니다."
   },
   "사실과 평가 구분하기": {
-    type: 'multiple-choice',
-    question: "다음 중 '사실'에 가장 가까운 진술은 무엇인가요?",
-    options: [
-      "어제 회의는 오후 3시에 시작해서 5시에 끝났다.",
-      "이번 분기 매출 실적이 매우 실망스럽다.",
-      "그의 발표는 지루하고 설득력이 없었다.",
-      "새로운 프로젝트 계획은 성공 가능성이 희박해 보인다."
+    type: 'sorting',
+    question: "다음 문장이 '사실(Fact)'인지 '평가(Opinion)'인지 구분하여 알맞은 영역으로 드래그하세요.",
+    categories: ['사실(Fact)', '평가(Opinion)'],
+    items: [
+      { id: '1-f', text: "회의가 10시에 시작했다.", category: "사실(Fact)" },
+      { id: '1-o', text: "회의가 너무 늦게 시작했다.", category: "평가(Opinion)" },
+      { id: '2-f', text: "김 과장이 발언을 4번 했다.", category: "사실(Fact)" },
+      { id: '2-o', text: "김 과장은 말이 너무 많다.", category: "평가(Opinion)" },
+      { id: '3-f', text: "보고서 3페이지에 오류가 2개 있다.", category: "사실(Fact)" },
+      { id: '3-o', text: "보고서 완성도가 떨어진다.", category: "평가(Opinion)" },
+      { id: '4-f', text: "프로젝트 일정이 2주 지연됐다.", category: "사실(Fact)" },
+      { id: '4-o', text: "프로젝트 관리가 엉망이다.", category: "평가(Opinion)" },
+      { id: '5-f', text: "참석자 12명 중 5명이 발언했다.", category: "사실(Fact)" },
+      { id: '5-o', text: "사람들이 참여도가 낮았다.", category: "평가(Opinion)" }
     ],
-    correctAnswer: "어제 회의는 오후 3시에 시작해서 5시에 끝났다.",
-    explanation: "'실망스럽다', '지루하다', '성공 가능성이 희박하다' 등은 주관적인 판단이 들어간 '평가'입니다. 반면, 회의 시간은 누구나 객관적으로 확인할 수 있는 '사실'에 해당합니다."
-  },
+    correctAnswer: "COMPLETE",
+    explanation: "사실(Fact)은 객관적으로 검증 가능한 데이터나 현상이며, 평가(Opinion)는 개인의 기준이나 감정이 들어간 주관적 판단입니다."
+  } as SortingQuiz,
   "피드백": {
     type: 'multiple-choice',
     question: "효과적인 피드백을 제공하는 방법으로 가장 적절한 것은 무엇인가요?",

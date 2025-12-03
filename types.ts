@@ -1,4 +1,4 @@
-export type QuizType = 'multiple-choice' | 'matching';
+export type QuizType = 'multiple-choice' | 'matching' | 'sorting';
 
 export interface Quiz {
   type: QuizType;
@@ -14,6 +14,18 @@ export interface MatchingQuiz extends Quiz {
   term: string;
   definition: string;
   }>;
+}
+
+export interface SortingQuizItem {
+  id: string;
+  text: string;
+  category: string; // 예: 'FACT' | 'OPINION'
+}
+
+export interface SortingQuiz extends Quiz {
+  type: 'sorting';
+  categories: string[];
+  items: SortingQuizItem[];
 }
 
 export interface QuizProgress {

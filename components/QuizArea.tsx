@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import type { Quiz, MatchingQuiz, Gamification } from '../types';
+import type { Quiz, MatchingQuiz, SortingQuiz, Gamification } from '../types';
 import { AcademicCapIcon, CheckCircleIcon, XCircleIcon, ArrowRightIcon, ClockIcon, ArrowLeftIcon } from './icons';
+import { SortingQuizComponent } from './SortingQuizComponent';
 
 const MatchingQuizComponent: React.FC<{
   quiz: MatchingQuiz;
@@ -384,6 +385,9 @@ const QuizArea: React.FC<QuizAreaProps> = ({
       </div>
 
       <div className="bg-white p-4 sm:p-6 md:p-8 rounded-xl shadow-md">
+        {hasQuiz && quiz.type === 'sorting' && (
+          <SortingQuizComponent quiz={quiz as SortingQuiz} onOptionSelect={onOptionSelect} />
+        )}
         {hasQuiz && quiz.type === 'matching' && (
            <MatchingQuizComponent quiz={quiz as MatchingQuiz} onOptionSelect={onOptionSelect} hasAnswered={hasAnswered} />
         )}

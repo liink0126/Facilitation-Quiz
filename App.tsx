@@ -218,7 +218,7 @@ export default function App(): React.ReactElement {
     }
   }, [quizMode]);
 
-  // 학습 내용 보기 완료 처리
+  // 학습 내용 보기 완료 처리 및 시험 모드로 전환
   const handleContentViewed = useCallback((topic: string) => {
     console.log('학습 완료 처리:', topic);
     setViewedContent(prev => {
@@ -226,8 +226,16 @@ export default function App(): React.ReactElement {
       console.log('업데이트된 viewedContent:', newSet);
       return newSet;
     });
-    // 학습 완료 후 시험 모드로 자동 전환 안내
+    // 학습 완료 후 시험 모드로 자동 전환
     setError(null);
+    setQuizMode('exam');
+    // 현재 주제의 퀴즈 로드
+    const isDesignMethodology = topic === "설계 방법론";
+    const quizKey = isDesignMethodology ? DESIGN_METHODOLOGY_QUIZZES[0] : topic;
+    const quizData = (QUIZ_DATA as Record<string, Quiz>)[quizKey];
+    if (quizData && quizData.question) {
+      setQuiz(quizData);
+    }
   }, []);
 
   // 핸들러 함수들을 먼저 정의
@@ -237,7 +245,7 @@ export default function App(): React.ReactElement {
     const topic = TOPICS[index];
     const topicName = topic;
     
-    // 잠금 확인
+    // 잠금 확인 (학습 모드에서만)
     if (quizMode === 'learning' && index > unlockedTopics) {
       setError(`이전 단계를 먼저 완료해주세요. 현재 ${TOPICS[unlockedTopics]} 단계까지 진행 가능합니다.`);
       return;

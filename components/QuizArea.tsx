@@ -183,7 +183,6 @@ const QuizArea: React.FC<QuizAreaProps> = ({
   onContentViewed,
   gamification,
   passedExams = new Set(),
-  onNextQuiz,
 }) => {
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
   

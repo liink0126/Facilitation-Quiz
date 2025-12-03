@@ -815,7 +815,6 @@ export default function App(): React.ReactElement {
           onContentViewed={handleContentViewed}
           gamification={gamification}
           passedExams={passedExams}
-          onNextQuiz={handleNextQuestion}
         />
       </main>
     </div>

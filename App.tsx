@@ -220,22 +220,41 @@ export default function App(): React.ReactElement {
 
   // 학습 내용 보기 완료 처리 및 시험 모드로 전환
   const handleContentViewed = useCallback((topic: string) => {
-    console.log('학습 완료 처리:', topic);
+    console.log('문제 풀기 버튼 클릭 - 학습 완료 처리:', topic);
+    
+    // 학습 완료 처리
     setViewedContent(prev => {
       const newSet = new Set([...prev, topic]);
       console.log('업데이트된 viewedContent:', newSet);
       return newSet;
     });
-    // 학습 완료 후 시험 모드로 자동 전환
+    
+    // 시험 모드로 자동 전환
     setError(null);
     setQuizMode('exam');
+    
     // 현재 주제의 퀴즈 로드
     const isDesignMethodology = topic === "설계 방법론";
     const quizKey = isDesignMethodology ? DESIGN_METHODOLOGY_QUIZZES[0] : topic;
     const quizData = (QUIZ_DATA as Record<string, Quiz>)[quizKey];
+    
+    console.log('퀴즈 로드 시도:', quizKey, quizData ? '퀴즈 있음' : '퀴즈 없음');
+    
     if (quizData && quizData.question) {
       setQuiz(quizData);
+      console.log('퀴즈 설정 완료');
+    } else {
+      console.error('퀴즈 데이터를 찾을 수 없습니다:', quizKey);
+      setError('이 주제에 대한 퀴즈가 아직 준비되지 않았습니다.');
     }
+    
+    // 퀴즈 상태 초기화
+    setUserSelection(null);
+    setIncorrectSelections([]);
+    setPersonalizedExplanation(null);
+    setTimerActive(true);
+    setTimeLeft(QUIZ_DURATION);
+    startTimeRef.current = Date.now();
   }, []);
 
   // 핸들러 함수들을 먼저 정의
@@ -273,11 +292,31 @@ export default function App(): React.ReactElement {
     
     setTopicContent(contentData || null);
 
-    // 학습 모드에서는 퀴즈를 보여주지 않음
+    // 모드에 따라 퀴즈 표시 여부 결정
     if (quizMode === 'learning') {
+      // 학습 모드에서는 퀴즈를 보여주지 않음
       setQuiz(null);
+    } else if (quizMode === 'exam') {
+      // 시험 모드에서는 퀴즈 표시 (학습 완료한 주제만)
+      if (viewedContent.has(topicName)) {
+        if (quizData && quizData.question) {
+          setQuiz(quizData);
+        } else {
+          setError('이 주제에 대한 퀴즈가 아직 준비되지 않았습니다.');
+          setQuiz(null);
+        }
+      } else {
+        // 학습 완료하지 않았지만 시험 모드로 전환된 경우 (문제 풀기 버튼 클릭 후)
+        // 퀴즈는 handleContentViewed에서 이미 설정되므로 여기서는 에러만 표시하지 않음
+        if (quizData && quizData.question) {
+          setQuiz(quizData);
+        } else {
+          setError('이 주제에 대한 퀴즈가 아직 준비되지 않았습니다.');
+          setQuiz(null);
+        }
+      }
     } else {
-      // 시험/복습 모드에서는 퀴즈 표시
+      // 복습 모드에서는 퀴즈 표시
       if (!contentData && (!quizData || !quizData.question)) {
         setError('이 주제에 대한 학습 자료가 아직 준비되지 않았습니다.');
         setQuiz(null);

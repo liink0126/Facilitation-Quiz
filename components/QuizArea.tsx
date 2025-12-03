@@ -215,88 +215,32 @@ const QuizArea: React.FC<QuizAreaProps> = ({
       );
     }
     
-    // topicContent가 있는 경우
-    const handleContentComplete = () => {
-      console.log('학습 완료 버튼 클릭!', topicName);
+    // topicContent가 있는 경우 - 학습 내용 표시
+    const handleStartQuiz = () => {
+      console.log('문제 풀기 버튼 클릭!', topicName);
       if (onContentViewed) {
         onContentViewed(topicName);
-        console.log('onContentViewed 호출 완료');
+        console.log('onContentViewed 호출 완료 - 시험 모드로 전환');
       } else {
         console.error('onContentViewed가 정의되지 않았습니다!');
       }
     };
     
-    // 학습 완료하지 않은 경우
-    if (!hasViewedContent) {
-      return (
-        <div className="max-w-4xl mx-auto animate-fade-in-up">
-          {selectedTopic && (
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-800 mb-8">
-              {selectedTopic}
-            </h2>
-          )}
-          <div 
-            className="content-area prose prose-slate max-w-none mb-8"
-            dangerouslySetInnerHTML={{ __html: topicContent }}
-          />
-          <div className="flex justify-center mt-8 mb-12">
-            <button
-              type="button"
-              onClick={handleContentComplete}
-              className="px-8 py-4 bg-gradient-to-r from-[#d83968] to-pink-600 text-white font-bold text-lg rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 cursor-pointer relative z-10"
-            >
-              학습 완료! 퀴즈 풀러 가기 →
-            </button>
-          </div>
-          <div className="text-center text-slate-500 text-sm mb-8">
-            ⬆️ 위 버튼을 클릭하여 퀴즈를 풀어보세요. 정답을 맞추면 다음 목차가 열립니다!
-          </div>
-        </div>
-      );
-    }
-    
-    // 학습 완료했지만 시험을 통과하지 않은 경우 - 학습 내용 다시 보여주고 시험 모드로 이동 안내
-    if (hasViewedContent && !hasPassedExam) {
-      return (
-        <div className="max-w-4xl mx-auto animate-fade-in-up">
-          {selectedTopic && (
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-800 mb-8">
-              {selectedTopic}
-            </h2>
-          )}
-          <div 
-            className="content-area prose prose-slate max-w-none mb-8"
-            dangerouslySetInnerHTML={{ __html: topicContent }}
-          />
-          <div className="p-6 bg-blue-50 border-l-4 border-blue-400 rounded-xl mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-2xl">✅</span>
-              <h3 className="text-lg font-bold text-blue-800">학습 완료!</h3>
-            </div>
-            <p className="text-blue-700 mb-4">
-              이 주제의 학습을 완료하셨습니다. 이제 시험 모드로 전환하여 퀴즈를 풀어보세요!
-            </p>
-            <div className="text-sm text-blue-600">
-              💡 사이드바에서 <strong>"시험"</strong> 버튼을 클릭하여 시험 모드로 전환할 수 있습니다.
-            </div>
-          </div>
-        </div>
-      );
-    }
-    
-    // 시험 통과한 경우 - 학습 내용 다시 보여주기
-    if (hasPassedExam) {
-      return (
-        <div className="max-w-4xl mx-auto animate-fade-in-up">
-          {selectedTopic && (
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-800 mb-8">
-              {selectedTopic}
-            </h2>
-          )}
-          <div 
-            className="content-area prose prose-slate max-w-none mb-8"
-            dangerouslySetInnerHTML={{ __html: topicContent }}
-          />
+    // 학습 내용 표시 (시험 통과 여부와 관계없이 항상 표시)
+    return (
+      <div className="max-w-4xl mx-auto animate-fade-in-up">
+        {selectedTopic && (
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-800 mb-8">
+            {selectedTopic}
+          </h2>
+        )}
+        <div 
+          className="content-area prose prose-slate max-w-none mb-8"
+          dangerouslySetInnerHTML={{ __html: topicContent }}
+        />
+        
+        {/* 시험 통과한 경우 축하 메시지 */}
+        {hasPassedExam && (
           <div className="p-6 bg-emerald-50 border-l-4 border-emerald-400 rounded-xl mb-8">
             <div className="flex items-center gap-3 mb-4">
               <span className="text-2xl">🎉</span>
@@ -306,9 +250,27 @@ const QuizArea: React.FC<QuizAreaProps> = ({
               축하합니다! 이 주제의 학습과 시험을 모두 완료하셨습니다.
             </p>
           </div>
-        </div>
-      );
-    }
+        )}
+        
+        {/* 문제 풀기 버튼 - 시험 통과하지 않은 경우에만 표시 */}
+        {!hasPassedExam && (
+          <>
+            <div className="flex justify-center mt-8 mb-4">
+              <button
+                type="button"
+                onClick={handleStartQuiz}
+                className="px-10 py-4 bg-gradient-to-r from-[#d83968] to-pink-600 text-white font-bold text-xl rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 cursor-pointer relative z-10"
+              >
+                📝 문제 풀기
+              </button>
+            </div>
+            <div className="text-center text-slate-500 text-sm mb-8">
+              ⬆️ 위 버튼을 클릭하여 문제를 풀어보세요. 정답을 맞추면 다음 목차가 열립니다!
+            </div>
+          </>
+        )}
+      </div>
+    );
   }
   
   // 일반 학습 모드 (showContent가 true일 때) - 이제 사용되지 않음
